@@ -28,7 +28,16 @@
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
 
-        <div id="dashboardView" class="view"><div class="stats-grid"><div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div><div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div></div><div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div></div>
+        <div id="dashboardView" class="view">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div>
+                <div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div>
+                <div class="stat-card" style="border-left: 4px solid var(--accent-color);"><div class="stat-info"><h3>Total Servers</h3><p id="dashTotalServers">0</p></div></div>
+                <div class="stat-card" style="border-left: 4px solid #10b981;"><div class="stat-info"><h3>Production</h3><p id="dashProdServers">0</p></div></div>
+                <div class="stat-card" style="border-left: 4px solid #f59e0b;"><div class="stat-info"><h3>Global IPs</h3><p id="dashTotalIps">0</p></div></div>
+            </div>
+            <div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div>
+        </div>
         <div id="projectsView" class="view" style="display:none;"><div class="table-header"><h2>Projects</h2><button class="btn-primary" onclick="window.openProjectModal()">Add Project</button></div><div id="projectGrid" class="project-grid"></div></div>
         
         <div id="teamView" class="view" style="display:none;">
@@ -126,6 +135,16 @@
 
         window.refreshUI = function() {
             document.getElementById('headerName').textContent = window.currentUser.name || window.currentUser.username;
+            
+            // Dashboard Stats
+            const totalSrv = window.servers.length;
+            const totalIpsGlobal = window.servers.reduce((acc, s) => acc + parseInt(s.nbrIp || 0), 0);
+            const prodSrv = window.servers.filter(s => (s.status || '').toLowerCase().includes('prod')).length;
+            
+            document.getElementById('dashTotalServers').textContent = totalSrv;
+            document.getElementById('dashTotalIps').textContent = totalIpsGlobal;
+            document.getElementById('dashProdServers').textContent = prodSrv;
+
             const ownerFilter = document.getElementById('globalOwnerFilter').value;
             const owners = [...new Set(window.servers.map(s => s.owner).filter(o => o))];
             const filterEl = document.getElementById('globalOwnerFilter');
