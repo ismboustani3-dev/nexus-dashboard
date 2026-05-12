@@ -12,8 +12,6 @@
         .admin-only { display: none; }
         .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
         .team-grid { display: grid; grid-template-columns: 1fr; gap: 3rem; }
-        
-        /* Team Stats Styles */
         .team-analytics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
         .analytics-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 16px; position: relative; overflow: hidden; }
         .analytics-card h4 { color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem; }
@@ -22,144 +20,50 @@
         .asn-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.75rem; }
         .asn-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; width: 100%; }
         .asn-progress { height: 100%; background: var(--accent-color); border-radius: 2px; transition: 0.5s; }
+        .import-box { background: rgba(255,255,255,0.05); border: 2px dashed var(--border-color); padding: 1.5rem; text-align: center; border-radius: 12px; transition: 0.3s; cursor: pointer; }
+        .import-box:hover { border-color: var(--accent-color); background: rgba(0,242,254,0.05); }
     </style>
 </head>
 <body>
-    <div id="loginScreen" class="login-screen" style="display: flex;">
-        <div class="login-card">
-            <div class="logo" style="justify-content:center; margin-bottom: 2rem;"><i data-lucide="layers" size="32"></i><span>Nexus</span></div>
-            <h2>Login</h2>
-            <form onsubmit="window.handleLogin(event)">
-                <div class="form-group"><input type="text" id="loginUser" placeholder="Username" required></div>
-                <div class="form-group"><input type="password" id="loginPass" placeholder="Password" required></div>
-                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">Sign In</button>
-            </form>
-        </div>
-    </div>
+    <!-- Login -->
+    <div id="loginScreen" class="login-screen" style="display: flex;"><div class="login-card"><div class="logo" style="justify-content:center; margin-bottom: 2rem;"><i data-lucide="layers" size="32"></i><span>Nexus</span></div><h2>Login</h2><form onsubmit="window.handleLogin(event)"><div class="form-group"><input type="text" id="loginUser" placeholder="Username" required></div><div class="form-group"><input type="password" id="loginPass" placeholder="Password" required></div><button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">Sign In</button><p id="loginError" style="color:red; display:none; margin-top:1rem;">Invalid Credentials</p></form></div></div>
 
-    <aside class="sidebar">
-        <div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div>
-        <nav class="nav-links">
-            <li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li>
-            <li class="nav-item admin-only"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li>
-            <li class="nav-item admin-only"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li>
-        </nav>
-        <div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Logout</span></a></div>
-    </aside>
+    <!-- Sidebar -->
+    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item admin-only"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item admin-only"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Logout</span></a></div></aside>
 
     <main class="main-content">
-        <header>
-            <div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div>
-            <div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div>
-        </header>
+        <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
 
-        <!-- Main Dashboard -->
-        <div id="dashboardView" class="view">
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div>
-                <div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div>
-            </div>
-            <div class="card-container"><h2>Overview</h2><div id="userStatsList" class="user-stats-list"></div></div>
-        </div>
+        <!-- DASHBOARD -->
+        <div id="dashboardView" class="view"><div class="stats-grid"><div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div><div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div></div><div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div></div>
 
-        <!-- Projects View -->
-        <div id="projectsView" class="view" style="display:none;">
-            <div class="table-header"><h2>Projects</h2><button class="btn-primary admin-only" onclick="window.openProjectModal()">Add Project</button></div>
-            <div id="projectGrid" class="project-grid"></div>
-        </div>
+        <!-- PROJECTS -->
+        <div id="projectsView" class="view" style="display:none;"><div class="table-header"><h2>Projects</h2><button class="btn-primary admin-only" onclick="window.openProjectModal()">Add Project</button></div><div id="projectGrid" class="project-grid"></div></div>
 
-        <!-- Team View (with Analytics) -->
+        <!-- TEAM -->
         <div id="teamView" class="view" style="display:none;">
             <h1 style="margin-bottom: 2rem; font-family: 'Outfit';">Team Infrastructure</h1>
-            
-            <!-- Team Dashboard Stats -->
             <div class="team-analytics">
-                <div class="analytics-card">
-                    <h4>Total Servers</h4>
-                    <div class="val" id="teamTotalServers">0</div>
-                    <i data-lucide="server" style="position:absolute; right: -10px; bottom: -10px; opacity:0.05; width:80px; height:80px;"></i>
-                </div>
-                <div class="analytics-card">
-                    <h4>Total IPs Pool</h4>
-                    <div class="val" id="teamTotalIps">0</div>
-                    <i data-lucide="glob" style="position:absolute; right: -10px; bottom: -10px; opacity:0.05; width:80px; height:80px;"></i>
-                </div>
-                <div class="analytics-card" style="grid-column: span 2;">
-                    <h4>Provider Distribution (ASN)</h4>
-                    <div id="asnDistributionList" class="asn-list"></div>
-                </div>
+                <div class="analytics-card"><h4>Total Servers</h4><div class="val" id="teamTotalServers">0</div></div>
+                <div class="analytics-card"><h4>Total IPs Pool</h4><div class="val" id="teamTotalIps">0</div></div>
+                <div class="analytics-card" style="grid-column: span 2;"><h4>Provider Distribution (ASN)</h4><div id="asnDistributionList"></div></div>
             </div>
-
-            <div class="table-header" style="margin-bottom: 2rem;">
-                <h2>Server Inventory</h2>
-                <div style="display:flex; gap:1rem;">
-                    <button class="btn-secondary" onclick="window.openImportModal()"><i data-lucide="upload" size="14"></i> Import File</button>
-                    <button class="btn-primary" onclick="window.openServerModal()">Add Server</button>
-                </div>
-            </div>
-            <div class="team-grid" id="teamGrid"></div>
+            <div class="table-header" style="margin-bottom: 2rem;"><h2>Server Inventory</h2><div style="display:flex; gap:1rem;"><button class="btn-secondary" onclick="window.openImportModal()"><i data-lucide="upload" size="14"></i> Import File</button><button class="btn-primary" onclick="window.openServerModal()">Add Server</button></div></div>
+            <div id="teamGrid" class="team-grid"></div>
         </div>
 
-        <!-- Settings -->
-        <div id="settingsView" class="view" style="display:none;">
-            <div class="card-container" style="max-width: 800px;">
-                <form onsubmit="window.saveSettings(event)">
-                    <h2>Admin Profile</h2>
-                    <div class="form-group"><label>Name</label><input type="text" id="setAdminName" required></div>
-                    <div class="form-group"><label>Password</label><input type="password" id="setAdminPass" placeholder="New password..."></div>
-                    <button type="submit" class="btn-primary">Update</button>
-                </form>
-                <div class="user-mgmt-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h2>Users</h2><button class="btn-primary" onclick="window.openUserModal()">Create User</button></div>
-                    <div id="usersList"></div>
-                </div>
-            </div>
-        </div>
+        <!-- SETTINGS -->
+        <div id="settingsView" class="view" style="display:none;"><div class="card-container" style="max-width: 800px;"><form onsubmit="window.saveSettings(event)"><h2>Admin Profile</h2><div class="form-group"><label>Name</label><input type="text" id="setAdminName" required></div><div class="form-group"><label>Password</label><input type="password" id="setAdminPass" placeholder="New password..."></div><button type="submit" class="btn-primary">Update</button></form><div class="user-mgmt-card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h2>Users</h2><button class="btn-primary" onclick="window.openUserModal()">Create User</button></div><div id="usersList"></div></div></div></div>
     </main>
 
     <!-- Modals -->
     <div class="modal-overlay" id="modalOverlay"><div class="modal"><h2>Project</h2><form id="projectForm" onsubmit="window.handleProjectSubmit(event)"><input type="hidden" id="projectId"><div class="form-group"><label>Owner</label><input type="text" id="ownerName" required></div><div class="form-group"><label>Project</label><input type="text" id="projectName" required></div><div class="form-group"><label>Link</label><input type="url" id="projectLink" required></div><div class="form-group"><label>User</label><input type="text" id="username" required></div><div class="form-group"><label>Pass</label><input type="password" id="password" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeProjectModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
-    
     <div class="modal-overlay" id="userModalOverlay"><div class="modal"><h2>User</h2><form onsubmit="window.handleUserSubmit(event)"><div class="form-group"><label>User</label><input type="text" id="newUsername" required></div><div class="form-group"><label>Pass</label><input type="password" id="newUserPass" required></div><div class="form-group"><label>Access (Owners)</label><div id="ownersChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeUserModal()">Cancel</button><button type="submit" class="btn-primary">Create</button></div></form></div></div>
-
-    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div>
-            <div class="form-group"><label>Main IP</label><input type="text" id="sIp" required></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group"><label>Statut</label><input type="text" id="sStatus" value="Active"></div>
-            <div class="form-group"><label>Class</label><input type="text" id="sClass"></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group"><label>Date</label><input type="text" id="sDate"></div>
-            <div class="form-group"><label>Entre</label><input type="text" id="sEntre"></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group"><label>Notice</label><input type="text" id="sNotice"></div>
-            <div class="form-group"><label>Notice Date</label><input type="text" id="sNoticeDate"></div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div>
-            <div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" value="0"></div>
-        </div>
-        <div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div>
-        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div>
-    </form></div></div>
-
-    <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2>
-        <div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div>
-        <div class="import-box" onclick="document.getElementById('fileInput').click()">
-            <i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p>
-            <input type="file" id="fileInput" accept=".csv,.txt" style="display: none;">
-        </div>
-        <textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea>
-        <div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div>
-    </div></div>
+    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId"><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div><div class="form-group"><label>Main IP</label><input type="text" id="sIp" required></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Statut</label><input type="text" id="sStatus" value="Active"></div><div class="form-group"><label>Class</label><input type="text" id="sClass"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Date</label><input type="text" id="sDate"></div><div class="form-group"><label>Entre</label><input type="text" id="sEntre"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Notice</label><input type="text" id="sNotice"></div><div class="form-group"><label>Notice Date</label><input type="text" id="sNoticeDate"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div><div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" value="0"></div></div><div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div></form></div></div>
+    <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2><div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="import-box" onclick="document.getElementById('fileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="fileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div></div></div>
 
     <script>
-        // DATA
+        // DATA & STORAGE
         window.projects = JSON.parse(localStorage.getItem('nexus_projects')) || [];
         window.servers = JSON.parse(localStorage.getItem('nexus_servers')) || [];
         window.teamNames = JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' };
@@ -174,6 +78,7 @@
             window.refreshUI();
         };
 
+        // AUTH
         window.handleLogin = function(e) {
             e.preventDefault();
             const u = document.getElementById('loginUser').value.toLowerCase();
@@ -183,82 +88,45 @@
             if(sub) { window.currentUser = { ...sub, role: 'member' }; document.getElementById('loginScreen').style.display = 'none'; window.refreshUI(); }
             else { document.getElementById('loginError').style.display = 'block'; }
         };
-
         window.logout = function() { location.reload(); };
 
+        // MODAL CONTROLS
+        window.openImportModal = function() { document.getElementById('importText').value = ''; document.getElementById('importModalOverlay').style.display = 'flex'; };
+        window.closeImportModal = function() { document.getElementById('importModalOverlay').style.display = 'none'; };
+        window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
+        window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
+        window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
+        window.closeServerModal = function() { document.getElementById('serverModalOverlay').style.display = 'none'; };
+        window.openUserModal = function() { const l = document.getElementById('ownersChecklist'); const o = [...new Set(window.projects.map(p => p.owner))]; l.innerHTML = o.map(x => `<label><input type="checkbox" name="allowedOwner" value="${x}"> ${x}</label>`).join(''); document.getElementById('userModalOverlay').style.display = 'flex'; };
+        window.closeUserModal = function() { document.getElementById('userModalOverlay').style.display = 'none'; };
+
+        // CORE LOGIC
         window.handleImport = function() {
             const f = document.getElementById('fileInput').files[0];
             const t = document.getElementById('importTeam').value;
             const txt = document.getElementById('importText').value.trim();
-            if (f) { 
-                const r = new FileReader(); 
-                r.onload = (e) => {
-                    let content = e.target.result;
-                    // Remove BOM characters if present
-                    content = content.replace(/^\uFEFF/, "");
-                    window.process(content, t);
-                };
-                r.onerror = () => alert("Error reading file!");
-                r.readAsText(f); 
-            } else if (txt) { 
-                window.process(txt, t); 
-            } else {
-                alert('Please select a file or paste your data!');
-            }
+            if (f) { const r = new FileReader(); r.onload = (e) => window.process(e.target.result.replace(/^\uFEFF/, ""), t); r.readAsText(f); } else if (txt) { window.process(txt, t); }
         };
-
         window.process = function(raw, team) {
-            try {
-                const lines = raw.split(/\r?\n/);
-                let count = 0;
-                lines.forEach((line, idx) => {
-                    const cleanLine = line.trim();
-                    if(!cleanLine || idx === 0 && cleanLine.toLowerCase().includes('servers')) return;
-                    
-                    const p = cleanLine.split(/[;,\t]/);
-                    if(p.length >= 2) {
-                        window.servers.push({
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                            name: p[0] ? p[0].trim() : 'Srv',
-                            ip: p[1] ? p[1].trim() : '',
-                            status: p[2] ? p[2].trim() : 'Active',
-                            class: p[3] ? p[3].trim() : '',
-                            date: p[4] ? p[4].trim() : '',
-                            entre: p[5] ? p[5].trim() : '',
-                            notice: p[6] ? p[6].trim() : '',
-                            noticeDate: p[7] ? p[7].trim() : '',
-                            asn: p[8] ? p[8].trim() : '',
-                            nbrIp: p[9] ? p[9].trim() : '0',
-                            team: team.toString()
-                        });
-                        count++;
-                    }
-                });
-                window.saveData(); 
-                window.closeImportModal(); 
-                alert('Success: ' + count + ' servers added to Team ' + team);
-                // Clear file input for next use
-                document.getElementById('fileInput').value = "";
-            } catch (err) {
-                alert("Processing Error: " + err.message);
-            }
+            const lines = raw.split(/\r?\n/); let count = 0;
+            lines.forEach((line, idx) => {
+                const clean = line.trim(); if(!clean || (idx === 0 && clean.toLowerCase().includes('servers'))) return;
+                const p = clean.split(/[;,\t]/);
+                if(p.length >= 2) {
+                    window.servers.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 4), name: p[0]?.trim(), ip: p[1]?.trim(), status: p[2]?.trim(), class: p[3]?.trim(), date: p[4]?.trim(), entre: p[5]?.trim(), notice: p[6]?.trim(), noticeDate: p[7]?.trim(), asn: p[8]?.trim(), nbrIp: p[9]?.trim() || '0', team: team.toString() });
+                    count++;
+                }
+            });
+            window.saveData(); window.closeImportModal(); alert('Success: ' + count + ' servers added!');
         };
-
         window.handleServerSubmit = function(e) {
-            e.preventDefault();
-            const id = document.getElementById('serverId').value || Date.now().toString();
-            const data = {
-                id, name: document.getElementById('sName').value, ip: document.getElementById('sIp').value,
-                status: document.getElementById('sStatus').value, class: document.getElementById('sClass').value,
-                date: document.getElementById('sDate').value, entre: document.getElementById('sEntre').value,
-                notice: document.getElementById('sNotice').value, noticeDate: document.getElementById('sNoticeDate').value,
-                asn: document.getElementById('sAsn').value, nbrIp: document.getElementById('sNbrIp').value, team: document.getElementById('sTeam').value
-            };
-            const idx = window.servers.findIndex(s => s.id === id);
-            if(idx > -1) window.servers[idx] = data; else window.servers.push(data);
+            e.preventDefault(); const id = document.getElementById('serverId').value || Date.now().toString();
+            const data = { id, name: document.getElementById('sName').value, ip: document.getElementById('sIp').value, status: document.getElementById('sStatus').value, class: document.getElementById('sClass').value, date: document.getElementById('sDate').value, entre: document.getElementById('sEntre').value, notice: document.getElementById('sNotice').value, noticeDate: document.getElementById('sNoticeDate').value, asn: document.getElementById('sAsn').value, nbrIp: document.getElementById('sNbrIp').value, team: document.getElementById('sTeam').value };
+            const idx = window.servers.findIndex(s => s.id === id); if(idx > -1) window.servers[idx] = data; else window.servers.push(data);
             window.saveData(); window.closeServerModal();
         };
 
+        // UI RENDER
         window.refreshUI = function() {
             if(!window.currentUser) return;
             document.getElementById('headerName').textContent = window.currentUser.name || window.currentUser.username;
@@ -272,17 +140,14 @@
             const grouped = vP.reduce((a, p) => { (a[p.owner] = a[p.owner] || []).push(p); return a; }, {});
             Object.keys(grouped).forEach(o => {
                 const c = document.createElement('div'); c.className = 'user-card';
-                c.innerHTML = `<div class="user-card-header"><h3>${o}</h3>${window.currentUser.role === 'admin' ? `<button onclick="window.deleteUser('${o}')">Del</button>` : ''}</div>
-                    <div class="project-list">${grouped[o].map(p => `<div class="project-item"><span>${p.name}</span>${window.currentUser.role === 'admin' ? `<button onclick="window.editProject('${p.id}')">Edit</button><button onclick="window.deleteProject('${p.id}')">Del</button>` : ''}</div>`).join('')}</div>`;
+                c.innerHTML = `<div class="user-card-header"><h3>${o}</h3>${window.currentUser.role === 'admin' ? `<button onclick="window.deleteUser('${o}')">Del</button>` : ''}</div><div class="project-list">${grouped[o].map(p => `<div class="project-item"><span>${p.name}</span>${window.currentUser.role === 'admin' ? `<button onclick="window.editProject('${p.id}')">Edit</button><button onclick="window.deleteProject('${p.id}')">Del</button>` : ''}</div>`).join('')}</div>`;
                 grid.appendChild(c);
             });
 
-            // Team Analytics
             const totalSrv = window.servers.length;
             const totalIps = window.servers.reduce((acc, s) => acc + parseInt(s.nbrIp || 0), 0);
             document.getElementById('teamTotalServers').textContent = totalSrv;
             document.getElementById('teamTotalIps').textContent = totalIps;
-            
             const asnCounts = window.servers.reduce((acc, s) => { if(s.asn) acc[s.asn] = (acc[s.asn] || 0) + 1; return acc; }, {});
             const sortedAsn = Object.entries(asnCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
             const distList = document.getElementById('asnDistributionList');
@@ -292,23 +157,13 @@
             }).join('') || '<p style="color:var(--text-secondary); font-size:0.7rem;">No ASN data yet.</p>';
 
             const tg = document.getElementById('teamGrid');
-            const render = (tId, tName) => `
-                <div class="team-column">
-                    <div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><button onclick="window.editTeamName('team${tId}')">Edit</button></div>
-                    <div class="server-table-container"><table class="server-table">
-                        <thead><tr><th>SERVERS</th><th>IP</th><th>Statut</th><th>Date</th><th>Entre</th><th>ASN</th><th>IPs</th><th></th></tr></thead>
-                        <tbody>${window.servers.filter(s => s.team == tId).map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td>${s.status}</td><td>${s.date}</td><td>${s.entre}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}</tbody>
-                    </table></div>
-                </div>`;
+            const render = (tId, tName) => `<div class="team-column"><div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><button onclick="window.editTeamName('team${tId}')">Edit</button></div><div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date</th><th>Entre</th><th>Notice</th><th>Date</th><th>ASN</th><th>Nbr IP</th><th></th></tr></thead><tbody>${window.servers.filter(s => s.team == tId).map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.entre}</td><td>${s.notice}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}</tbody></table></div></div>`;
             tg.innerHTML = render(1, window.teamNames.team1) + '<br>' + render(2, window.teamNames.team2);
             if(window.lucide) lucide.createIcons();
         };
 
         window.switchView = function(v, el) { if(!window.currentUser) return; if(window.currentUser.role !== 'admin' && (v === 'settings' || v === 'team')) return; document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if(el) el.classList.add('active'); document.querySelectorAll('.view').forEach(x => x.style.display = 'none'); document.getElementById(v + 'View').style.display = 'block'; };
-        window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
-        window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
-        window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
-        window.closeServerModal = function() { document.getElementById('serverModalOverlay').style.display = 'none'; };
+        window.handleProjectSubmit = function(e) { e.preventDefault(); const id = document.getElementById('projectId').value || Date.now().toString(); const d = { id, owner: document.getElementById('ownerName').value, name: document.getElementById('projectName').value, link: document.getElementById('projectLink').value, username: document.getElementById('username').value, password: document.getElementById('password').value }; const i = window.projects.findIndex(x => x.id === id); if(i > -1) window.projects[i] = d; else window.projects.push(d); window.saveData(); window.closeProjectModal(); };
         window.deleteProject = function(id) { if(confirm('Del?')) { window.projects = window.projects.filter(p => p.id !== id); window.saveData(); } };
         window.deleteUser = function(o) { if(confirm('Del User?')) { window.projects = window.projects.filter(p => p.owner !== o); window.saveData(); } };
         window.deleteServer = function(id) { if(confirm('Del Server?')) { window.servers = window.servers.filter(s => s.id !== id); window.saveData(); } };
@@ -316,8 +171,6 @@
         window.editServer = function(id) { const s = window.servers.find(x => x.id === id); if(s) { document.getElementById('serverId').value = s.id; document.getElementById('sName').value = s.name; document.getElementById('sIp').value = s.ip; document.getElementById('sStatus').value = s.status; document.getElementById('sClass').value = s.class; document.getElementById('sDate').value = s.date; document.getElementById('sEntre').value = s.entre; document.getElementById('sNotice').value = s.notice; document.getElementById('sNoticeDate').value = s.noticeDate; document.getElementById('sAsn').value = s.asn; document.getElementById('sNbrIp').value = s.nbrIp; document.getElementById('sTeam').value = s.team; document.getElementById('serverModalOverlay').style.display = 'flex'; } };
         window.editTeamName = function(k) { const n = prompt('New Name:', window.teamNames[k]); if(n) { window.teamNames[k] = n; window.saveData(); } };
         window.saveSettings = function(e) { e.preventDefault(); window.settings.adminName = document.getElementById('setAdminName').value; const p = document.getElementById('setAdminPass').value; if(p) window.settings.adminPass = p; window.saveData(); alert('Saved!'); };
-        window.openUserModal = function() { const l = document.getElementById('ownersChecklist'); const o = [...new Set(window.projects.map(p => p.owner))]; l.innerHTML = o.map(x => `<label><input type="checkbox" name="allowedOwner" value="${x}"> ${x}</label>`).join(''); document.getElementById('userModalOverlay').style.display = 'flex'; };
-        window.handleUserSubmit = function(e) { e.preventDefault(); const c = document.querySelectorAll('input[name="allowedOwner"]:checked'); const a = Array.from(c).map(x => x.value); const u = { username: document.getElementById('newUsername').value, password: document.getElementById('newUserPass').value, name: document.getElementById('newUsername').value, allowedOwners: a }; window.settings.users.push(u); window.saveData(); document.getElementById('userModalOverlay').style.display = 'none'; };
         window.onload = window.refreshUI;
     </script>
 </body>
