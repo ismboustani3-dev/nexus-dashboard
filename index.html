@@ -44,9 +44,20 @@
             </div>
 
             <div class="filter-bar">
-                <i data-lucide="filter" size="18"></i>
-                <span style="font-size:0.9rem; color:var(--text-secondary);">Filter by Owner:</span>
-                <select id="globalOwnerFilter" onchange="window.refreshUI()"><option value="all">All Owners</option></select>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <i data-lucide="filter" size="18"></i>
+                    <span style="font-size:0.9rem; color:var(--text-secondary);">Owner:</span>
+                    <select id="globalOwnerFilter" onchange="window.refreshUI()"><option value="all">All Owners</option></select>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
+                    <i data-lucide="users" size="18"></i>
+                    <span style="font-size:0.9rem; color:var(--text-secondary);">Display Team:</span>
+                    <select id="teamViewFilter" onchange="window.refreshUI()">
+                        <option value="all">All Teams</option>
+                        <option value="1">Team 1</option>
+                        <option value="2">Team 2</option>
+                    </select>
+                </div>
             </div>
 
             <div id="teamGrid" class="team-grid"></div>
@@ -141,6 +152,7 @@
             let filteredServers = window.servers;
             if(ownerFilter !== 'all') filteredServers = window.servers.filter(s => s.owner === ownerFilter);
 
+            const teamFilter = document.getElementById('teamViewFilter').value;
             const tg = document.getElementById('teamGrid');
             const render = (tId, tName) => {
                 const srvs = filteredServers.filter(s => s.team == tId);
@@ -160,7 +172,11 @@
                     </table></div>
                 </div>`;
             };
-            tg.innerHTML = render(1, window.teamNames.team1) + render(2, window.teamNames.team2);
+            
+            tg.innerHTML = '';
+            if(teamFilter === 'all' || teamFilter === '1') tg.innerHTML += render(1, window.teamNames.team1);
+            if(teamFilter === 'all' || teamFilter === '2') tg.innerHTML += render(2, window.teamNames.team2);
+            
             if(window.lucide) lucide.createIcons();
         };
 
