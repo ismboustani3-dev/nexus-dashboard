@@ -436,6 +436,7 @@
             if(!val) return;
             const lines = val.split(/\r?\n/);
             let addedCount = 0;
+            let updatedCount = 0;
             
             const activeOwnerFilter = document.getElementById('globalOwnerFilter').value;
             const inheritedOwner = activeOwnerFilter !== 'all' ? activeOwnerFilter : '';
@@ -451,34 +452,48 @@
                     const name = p[0].trim();
                     const rawIps = p[1].trim();
                     const ipsArray = rawIps.split(/[\s,]+/).filter(ip => ip);
-                    const formattedIps = ipsArray.join('\n');
                     
-                    window.servers.push({
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                        team: inheritedTeam,
-                        name: name,
-                        ip: formattedIps,
-                        status: 'Active',
-                        class: '',
-                        date: new Date().toLocaleDateString(),
-                        entre: '',
-                        notice: '',
-                        noticeDate: '',
-                        asn: '',
-                        nbrIp: ipsArray.length.toString(),
-                        owner: inheritedOwner
-                    });
-                    addedCount++;
+                    const existingSrv = window.servers.find(s => s.name === name);
+                    if (existingSrv) {
+                        const existingIps = (existingSrv.ip || '').split(/[\s\n,]+/).map(ip => ip.trim()).filter(ip => ip);
+                        const newIps = ipsArray.filter(ip => !existingIps.includes(ip));
+                        if (newIps.length > 0) {
+                            existingSrv.ip = [...existingIps, ...newIps].join('\n');
+                            existingSrv.nbrIp = (existingIps.length + newIps.length).toString();
+                            updatedCount++;
+                        }
+                    } else {
+                        const formattedIps = ipsArray.join('\n');
+                        window.servers.push({
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                            team: inheritedTeam,
+                            name: name,
+                            ip: formattedIps,
+                            status: 'Active',
+                            class: '',
+                            date: new Date().toLocaleDateString(),
+                            entre: '',
+                            notice: '',
+                            noticeDate: '',
+                            asn: '',
+                            nbrIp: ipsArray.length.toString(),
+                            owner: inheritedOwner
+                        });
+                        addedCount++;
+                    }
                 }
             });
             
-            if (addedCount > 0) {
+            if (addedCount > 0 || updatedCount > 0) {
                 window.saveData();
                 inputEl.value = '';
-                alert(`Successfully added ${addedCount} server(s) to Team ${inheritedTeam}.`);
+                let msg = '';
+                if (addedCount > 0) msg += `Added ${addedCount} new server(s). `;
+                if (updatedCount > 0) msg += `Updated ${updatedCount} existing server(s).`;
+                alert(msg);
                 window.refreshUI();
             } else {
-                alert('No servers added. Use format: Name;IP1,IP2...');
+                alert('No servers added or updated. Use format: Name;IP1,IP2...');
             }
         };
         window.quickDeleteServer = function() {
