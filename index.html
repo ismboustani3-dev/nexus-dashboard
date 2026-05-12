@@ -42,7 +42,7 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
+    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('blacklist', this)"><i data-lucide="shield-alert"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
 
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
@@ -127,6 +127,17 @@
             </div>
 
             <div id="teamGrid" class="team-grid"></div>
+        </div>
+
+        <div id="blacklistView" class="view" style="display:none;">
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:2rem; margin-bottom:2rem; text-align:center;">
+                <h2 style="margin-bottom: 1rem;">IP & Domain Intelligence</h2>
+                <div style="display:flex; gap:1rem; max-width:600px; margin:0 auto;">
+                    <input type="text" id="blInput" placeholder="Enter IP address or Domain..." style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:12px 16px; border-radius:8px; font-size:1rem; outline:none;">
+                    <button class="btn-primary" onclick="window.runBlacklistCheck()" style="padding:12px 24px; font-weight:bold;">Analyze</button>
+                </div>
+            </div>
+            <div id="blResults" style="display:grid; grid-template-columns:1fr; gap:1.5rem;"></div>
         </div>
 
         <div id="settingsView" class="view" style="display:none;"><div class="card-container" style="max-width: 800px;"><form onsubmit="window.saveSettings(event)"><h2>Admin Profile</h2><div class="form-group"><label>Name</label><input type="text" id="setAdminName" required></div><div class="form-group"><label>Password</label><input type="password" id="setAdminPass" placeholder="New password..."></div><button type="submit" class="btn-primary">Update</button></form><div class="user-mgmt-card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h2>Users</h2><button class="btn-primary" onclick="window.openUserModal()">Create User</button></div><div id="usersList"></div></div></div></div>
@@ -483,6 +494,54 @@
         window.editServer = function(id) { const s = window.servers.find(x => x.id === id); if(s) { document.getElementById('serverId').value = s.id; document.getElementById('sName').value = s.name; document.getElementById('sIp').value = s.ip; document.getElementById('sStatus').value = s.status; document.getElementById('sClass').value = s.class; document.getElementById('sOwner').value = s.owner || ''; document.getElementById('sDate').value = s.date; document.getElementById('sNoticeDate').value = s.noticeDate; document.getElementById('sAsn').value = s.asn; document.getElementById('sNbrIp').value = s.nbrIp; document.getElementById('sTeam').value = s.team; document.getElementById('serverModalOverlay').style.display = 'flex'; } };
         window.editTeamName = function(k) { const n = prompt('New Name:', window.teamNames[k]); if(n) { window.teamNames[k] = n; window.saveData(); } };
         window.saveSettings = function(e) { e.preventDefault(); window.settings.adminName = document.getElementById('setAdminName').value; const p = document.getElementById('setAdminPass').value; if(p) window.settings.adminPass = p; window.saveData(); alert('Saved!'); };
+        
+        window.runBlacklistCheck = async function() {
+            const input = document.getElementById('blInput').value.trim();
+            if (!input) return;
+            const resultsDiv = document.getElementById('blResults');
+            resultsDiv.innerHTML = '<div style="text-align:center; color:var(--accent-color); padding: 2rem;">Scanning intelligence sources... <div style="display:inline-block; width:16px; height:16px; border:2px solid; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; vertical-align:middle;"></div></div>';
+            
+            try {
+                const isIP = /^[0-9\.]+$/.test(input);
+                let ipDataHtml = '';
+                if (isIP) {
+                    const res = await fetch(`http://ip-api.com/json/${input}`);
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        ipDataHtml = `
+                            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem;">
+                                <h3 style="margin-bottom:1rem; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">Network Information</h3>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                                    <div><span style="color:var(--text-secondary); font-size:0.8rem;">ISP</span><br><strong style="color:#fff;">${data.isp}</strong></div>
+                                    <div><span style="color:var(--text-secondary); font-size:0.8rem;">Organization</span><br><strong style="color:#fff;">${data.org}</strong></div>
+                                    <div><span style="color:var(--text-secondary); font-size:0.8rem;">Country</span><br><strong style="color:#fff;">${data.country} (${data.countryCode})</strong></div>
+                                    <div><span style="color:var(--text-secondary); font-size:0.8rem;">City</span><br><strong style="color:#fff;">${data.city}</strong></div>
+                                    <div><span style="color:var(--text-secondary); font-size:0.8rem;">ASN</span><br><strong style="color:#fff;">${data.as}</strong></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                const quickLinksHtml = `
+                    <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1.5rem;">
+                        <h3 style="margin-bottom:1rem; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">Security & Blacklist Checks</h3>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.5rem;">Due to strict browser security constraints, deep blacklist scans (Spamhaus, DNSBL) require direct access to external tools. Click the buttons below to open instant reputation reports:</p>
+                        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                            <a href="https://www.abuseipdb.com/check/${input}" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; padding: 10px 20px; text-align:center;">Check AbuseIPDB</a>
+                            <a href="https://mxtoolbox.com/SuperTool.aspx?action=blacklist%3a${input}" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; background:rgba(0,0,0,0.5); border-color:var(--border-color); padding: 10px 20px; text-align:center;">Check MXToolbox</a>
+                            <a href="https://www.virustotal.com/gui/search/${input}" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; background:rgba(239,68,68,0.2); border-color:#ef4444; color:#ef4444; padding: 10px 20px; text-align:center;">Check VirusTotal</a>
+                        </div>
+                    </div>
+                `;
+                
+                resultsDiv.innerHTML = ipDataHtml + quickLinksHtml;
+                
+            } catch (err) {
+                resultsDiv.innerHTML = `<div style="color:#ef4444; padding: 1rem; border: 1px solid rgba(239,68,68,0.5); border-radius: 8px; background: rgba(239,68,68,0.1);">Error fetching network data. Note: If you are checking a domain name, use the external links below instead.<br><br><b>Error:</b> ${err.message}</div>`;
+            }
+        };
+
         window.onload = window.loadData;
     </script>
 </body>
