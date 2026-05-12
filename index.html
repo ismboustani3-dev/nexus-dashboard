@@ -11,14 +11,17 @@
         .login-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 3rem; border-radius: 32px; width: 100%; max-width: 400px; text-align: center; }
         .admin-only { display: none; }
         .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
-        .status-active { background: rgba(0, 230, 118, 0.1); color: #00e676; }
-        .status-pending { background: rgba(255, 145, 0, 0.1); color: #ff9100; }
-        .status-cancelled { background: rgba(255, 75, 92, 0.1); color: #ff4b5c; }
         .team-grid { display: grid; grid-template-columns: 1fr; gap: 3rem; }
-        .server-table th { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; padding: 12px 8px; }
-        .server-table td { font-size: 0.8rem; padding: 12px 8px; }
-        .import-box { background: rgba(255,255,255,0.05); border: 2px dashed var(--border-color); padding: 1.5rem; text-align: center; border-radius: 12px; transition: 0.3s; cursor: pointer; }
-        .import-box:hover { border-color: var(--accent-color); background: rgba(0,242,254,0.05); }
+        
+        /* Team Stats Styles */
+        .team-analytics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        .analytics-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 16px; position: relative; overflow: hidden; }
+        .analytics-card h4 { color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .analytics-card .val { font-size: 1.8rem; font-weight: 700; color: var(--accent-color); font-family: 'Outfit'; }
+        .asn-list { margin-top: 1rem; }
+        .asn-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.75rem; }
+        .asn-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; width: 100%; }
+        .asn-progress { height: 100%; background: var(--accent-color); border-radius: 2px; transition: 0.5s; }
     </style>
 </head>
 <body>
@@ -51,31 +54,54 @@
             <div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div>
         </header>
 
+        <!-- Main Dashboard -->
         <div id="dashboardView" class="view">
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div>
                 <div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div>
-                <div class="stat-card admin-only"><div class="stat-info"><h3>Servers</h3><p id="totalServers">0</p></div></div>
             </div>
             <div class="card-container"><h2>Overview</h2><div id="userStatsList" class="user-stats-list"></div></div>
         </div>
 
+        <!-- Projects View -->
         <div id="projectsView" class="view" style="display:none;">
             <div class="table-header"><h2>Projects</h2><button class="btn-primary admin-only" onclick="window.openProjectModal()">Add Project</button></div>
             <div id="projectGrid" class="project-grid"></div>
         </div>
 
+        <!-- Team View (with Analytics) -->
         <div id="teamView" class="view" style="display:none;">
+            <h1 style="margin-bottom: 2rem; font-family: 'Outfit';">Team Infrastructure</h1>
+            
+            <!-- Team Dashboard Stats -->
+            <div class="team-analytics">
+                <div class="analytics-card">
+                    <h4>Total Servers</h4>
+                    <div class="val" id="teamTotalServers">0</div>
+                    <i data-lucide="server" style="position:absolute; right: -10px; bottom: -10px; opacity:0.05; width:80px; height:80px;"></i>
+                </div>
+                <div class="analytics-card">
+                    <h4>Total IPs Pool</h4>
+                    <div class="val" id="teamTotalIps">0</div>
+                    <i data-lucide="glob" style="position:absolute; right: -10px; bottom: -10px; opacity:0.05; width:80px; height:80px;"></i>
+                </div>
+                <div class="analytics-card" style="grid-column: span 2;">
+                    <h4>Provider Distribution (ASN)</h4>
+                    <div id="asnDistributionList" class="asn-list"></div>
+                </div>
+            </div>
+
             <div class="table-header" style="margin-bottom: 2rem;">
-                <h2>Team Server Management</h2>
+                <h2>Server Inventory</h2>
                 <div style="display:flex; gap:1rem;">
                     <button class="btn-secondary" onclick="window.openImportModal()"><i data-lucide="upload" size="14"></i> Import File</button>
                     <button class="btn-primary" onclick="window.openServerModal()">Add Server</button>
                 </div>
             </div>
-            <div id="teamGrid" class="team-grid"></div>
+            <div class="team-grid" id="teamGrid"></div>
         </div>
 
+        <!-- Settings -->
         <div id="settingsView" class="view" style="display:none;">
             <div class="card-container" style="max-width: 800px;">
                 <form onsubmit="window.saveSettings(event)">
@@ -128,7 +154,7 @@
             <i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p>
             <input type="file" id="fileInput" accept=".csv,.txt" style="display: none;">
         </div>
-        <textarea id="importText" class="form-control" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea>
+        <textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea>
         <div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div>
     </div></div>
 
@@ -160,22 +186,11 @@
 
         window.logout = function() { location.reload(); };
 
-        // IMPORT
-        window.openImportModal = function() { document.getElementById('importText').value = ''; document.getElementById('importModalOverlay').style.display = 'flex'; };
-        window.closeImportModal = function() { document.getElementById('importModalOverlay').style.display = 'none'; };
-
         window.handleImport = function() {
             const f = document.getElementById('fileInput').files[0];
             const t = document.getElementById('importTeam').value;
             const txt = document.getElementById('importText').value.trim();
-
-            if (f) {
-                const r = new FileReader();
-                r.onload = (e) => window.process(e.target.result, t);
-                r.readAsText(f);
-            } else if (txt) {
-                window.process(txt, t);
-            }
+            if (f) { const r = new FileReader(); r.onload = (e) => window.process(e.target.result, t); r.readAsText(f); } else if (txt) { window.process(txt, t); }
         };
 
         window.process = function(raw, team) {
@@ -205,30 +220,21 @@
             window.saveData(); window.closeImportModal(); alert('Imported ' + count + ' servers!');
         };
 
-        // SERVER SUBMIT
         window.handleServerSubmit = function(e) {
             e.preventDefault();
             const id = document.getElementById('serverId').value || Date.now().toString();
             const data = {
-                id,
-                name: document.getElementById('sName').value,
-                ip: document.getElementById('sIp').value,
-                status: document.getElementById('sStatus').value,
-                class: document.getElementById('sClass').value,
-                date: document.getElementById('sDate').value,
-                entre: document.getElementById('sEntre').value,
-                notice: document.getElementById('sNotice').value,
-                noticeDate: document.getElementById('sNoticeDate').value,
-                asn: document.getElementById('sAsn').value,
-                nbrIp: document.getElementById('sNbrIp').value,
-                team: document.getElementById('sTeam').value
+                id, name: document.getElementById('sName').value, ip: document.getElementById('sIp').value,
+                status: document.getElementById('sStatus').value, class: document.getElementById('sClass').value,
+                date: document.getElementById('sDate').value, entre: document.getElementById('sEntre').value,
+                notice: document.getElementById('sNotice').value, noticeDate: document.getElementById('sNoticeDate').value,
+                asn: document.getElementById('sAsn').value, nbrIp: document.getElementById('sNbrIp').value, team: document.getElementById('sTeam').value
             };
             const idx = window.servers.findIndex(s => s.id === id);
             if(idx > -1) window.servers[idx] = data; else window.servers.push(data);
             window.saveData(); window.closeServerModal();
         };
 
-        // UI
         window.refreshUI = function() {
             if(!window.currentUser) return;
             document.getElementById('headerName').textContent = window.currentUser.name || window.currentUser.username;
@@ -237,7 +243,6 @@
             let vP = window.currentUser.role === 'member' ? window.projects.filter(p => window.currentUser.allowedOwners.includes(p.owner)) : window.projects;
             document.getElementById('totalProjects').textContent = vP.length;
             document.getElementById('totalUsers').textContent = [...new Set(vP.map(p => p.owner))].length;
-            document.getElementById('totalServers').textContent = window.servers.length;
 
             const grid = document.getElementById('projectGrid'); grid.innerHTML = '';
             const grouped = vP.reduce((a, p) => { (a[p.owner] = a[p.owner] || []).push(p); return a; }, {});
@@ -248,26 +253,38 @@
                 grid.appendChild(c);
             });
 
+            // Team Analytics
+            const totalSrv = window.servers.length;
+            const totalIps = window.servers.reduce((acc, s) => acc + parseInt(s.nbrIp || 0), 0);
+            document.getElementById('teamTotalServers').textContent = totalSrv;
+            document.getElementById('teamTotalIps').textContent = totalIps;
+            
+            const asnCounts = window.servers.reduce((acc, s) => { if(s.asn) acc[s.asn] = (acc[s.asn] || 0) + 1; return acc; }, {});
+            const sortedAsn = Object.entries(asnCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const distList = document.getElementById('asnDistributionList');
+            distList.innerHTML = sortedAsn.map(([asn, count]) => {
+                const perc = totalSrv > 0 ? (count / totalSrv * 100).toFixed(0) : 0;
+                return `<div class="asn-item"><span>${asn}</span><span>${perc}%</span></div><div class="asn-bar"><div class="asn-progress" style="width:${perc}%"></div></div>`;
+            }).join('') || '<p style="color:var(--text-secondary); font-size:0.7rem;">No ASN data yet.</p>';
+
             const tg = document.getElementById('teamGrid');
             const render = (tId, tName) => `
                 <div class="team-column">
                     <div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><button onclick="window.editTeamName('team${tId}')">Edit</button></div>
                     <div class="server-table-container"><table class="server-table">
-                        <thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date</th><th>Entre</th><th>Notice</th><th>Date</th><th>ASN</th><th>Nbr IP</th><th></th></tr></thead>
-                        <tbody>${window.servers.filter(s => s.team == tId).map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.entre}</td><td>${s.notice}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}</tbody>
+                        <thead><tr><th>SERVERS</th><th>IP</th><th>Statut</th><th>Date</th><th>Entre</th><th>ASN</th><th>IPs</th><th></th></tr></thead>
+                        <tbody>${window.servers.filter(s => s.team == tId).map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td>${s.status}</td><td>${s.date}</td><td>${s.entre}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}</tbody>
                     </table></div>
                 </div>`;
             tg.innerHTML = render(1, window.teamNames.team1) + '<br>' + render(2, window.teamNames.team2);
             if(window.lucide) lucide.createIcons();
         };
 
-        // HELPERS
         window.switchView = function(v, el) { if(!window.currentUser) return; if(window.currentUser.role !== 'admin' && (v === 'settings' || v === 'team')) return; document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if(el) el.classList.add('active'); document.querySelectorAll('.view').forEach(x => x.style.display = 'none'); document.getElementById(v + 'View').style.display = 'block'; };
         window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
         window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
         window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
         window.closeServerModal = function() { document.getElementById('serverModalOverlay').style.display = 'none'; };
-        window.handleProjectSubmit = function(e) { e.preventDefault(); const id = document.getElementById('projectId').value || Date.now().toString(); const d = { id, owner: document.getElementById('ownerName').value, name: document.getElementById('projectName').value, link: document.getElementById('projectLink').value, username: document.getElementById('username').value, password: document.getElementById('password').value }; const i = window.projects.findIndex(x => x.id === id); if(i > -1) window.projects[i] = d; else window.projects.push(d); window.saveData(); window.closeProjectModal(); };
         window.deleteProject = function(id) { if(confirm('Del?')) { window.projects = window.projects.filter(p => p.id !== id); window.saveData(); } };
         window.deleteUser = function(o) { if(confirm('Del User?')) { window.projects = window.projects.filter(p => p.owner !== o); window.saveData(); } };
         window.deleteServer = function(id) { if(confirm('Del Server?')) { window.servers = window.servers.filter(s => s.id !== id); window.saveData(); } };
