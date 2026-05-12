@@ -179,7 +179,27 @@
 
             // Fetch once
             db.ref('nexus').once('value').then((snapshot) => {
-                const data = snapshot.val() || {};
+                let data = snapshot.val();
+                
+                // MIGRATION LOGIC: If Firebase is empty, check localStorage
+                if (!data) {
+                    const localProjects = JSON.parse(localStorage.getItem('nexus_projects'));
+                    const localServers = JSON.parse(localStorage.getItem('nexus_servers'));
+                    if ((localProjects && localProjects.length > 0) || (localServers && localServers.length > 0)) {
+                        console.log("Migrating local data to Firebase...");
+                        data = {
+                            projects: localProjects || [],
+                            servers: localServers || [],
+                            teams: JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' },
+                            settings: JSON.parse(localStorage.getItem('nexus_settings')) || { adminName: 'Admin', adminPass: 'admin', users: [] }
+                        };
+                        db.ref('nexus').set(data);
+                        alert("Great news! Your local data has been successfully migrated to the cloud.");
+                    } else {
+                        data = {};
+                    }
+                }
+
                 window.projects = data.projects || [];
                 window.servers = data.servers || [];
                 window.teamNames = data.teams || { team1: 'Team 1', team2: 'Team 2' };
