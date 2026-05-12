@@ -73,7 +73,7 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('blacklist', this)"><i data-lucide="shield-alert"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
+    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Suivi Journalier</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
 
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
@@ -160,58 +160,43 @@
             <div id="teamGrid" class="team-grid"></div>
         </div>
 
-        <div id="blacklistView" class="view" style="display:none; padding: 0 2rem;">
-            <div class="bl-header">
-                <h2>Spamhaus Reputation Checker</h2>
-                <p>Check domain reputations or IP listing histories.</p>
+        <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
+            <div class="bl-header" style="margin-bottom: 1.5rem;">
+                <h2>Suivi Journalier des IPs</h2>
+                <p>Track the daily status of your IPs across teams.</p>
             </div>
             
-            <div style="text-align: center;">
+            <div style="text-align: center; margin-bottom: 2rem;">
                 <div class="bl-toggle">
-                    <button id="btnDomainsToggle" class="active" onclick="window.setBlMode('domains')">Domains</button>
-                    <button id="btnIpsToggle" onclick="window.setBlMode('ips')">IP Addresses</button>
+                    <button id="btnTrackTeam1" class="active" onclick="window.setTrackTeam(1)">Team 1</button>
+                    <button id="btnTrackTeam2" onclick="window.setTrackTeam(2)">Team 2</button>
                 </div>
             </div>
             
-            <textarea id="blBulkInput" class="bl-textarea" placeholder="himado.in&#10;hltv.org&#10;hochi.news&#10;huaban.com&#10;index.hu"></textarea>
-            
-            <div class="bl-actions-row">
-                <button class="bl-btn bl-btn-primary" onclick="window.runBulkCheck()"><i data-lucide="shield-check"></i> Check Domains/IPs</button>
-                <button class="bl-btn bl-btn-secondary" onclick="window.clearBlacklist()"><i data-lucide="trash-2"></i> Clear</button>
-                <button class="bl-btn bl-btn-success" onclick="window.exportBlacklistCSV()"><i data-lucide="download"></i> Export CSV</button>
-                <button class="bl-btn bl-btn-secondary" onclick="window.copyBlacklistResults()"><i data-lucide="copy"></i> Copy Results</button>
+            <div class="bl-actions-row" style="margin-bottom: 1rem;">
+                <button class="bl-btn bl-btn-primary" onclick="window.saveData()"><i data-lucide="save"></i> Save Changes</button>
+                <button class="bl-btn bl-btn-success" onclick="window.exportTrackingCSV()"><i data-lucide="download"></i> Export CSV</button>
             </div>
             
-            <div class="bl-filters">
-                <div class="bl-filter-group">
-                    <h4>Status Filter:</h4>
-                    <div class="bl-filter-btns" id="blStatusFilter">
-                        <button class="active" onclick="window.setBlFilter('all')">All</button>
-                        <button onclick="window.setBlFilter('clean')">Clean</button>
-                        <button onclick="window.setBlFilter('listed')">Listed</button>
-                    </div>
-                </div>
-                <div class="bl-filter-group">
-                    <h4>Score Range:</h4>
-                    <div style="display:flex; gap:10px;">
-                        <input type="number" id="blScoreMin" placeholder="Min" style="background:transparent; border:1px solid var(--border-color); color:white; padding:6px 12px; border-radius:6px; width:80px; outline:none;" onchange="window.renderBlTable()">
-                        <input type="number" id="blScoreMax" placeholder="Max" style="background:transparent; border:1px solid var(--border-color); color:white; padding:6px 12px; border-radius:6px; width:80px; outline:none;" onchange="window.renderBlTable()">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bl-table-container">
-                <table class="bl-table">
-                    <thead>
+            <div class="bl-table-container" style="overflow-x: auto; max-height: 60vh; overflow-y: auto;">
+                <table class="bl-table" id="trackingTable">
+                    <thead style="position: sticky; top: 0; background: #1e293b; z-index: 10;">
                         <tr>
-                            <th>TARGET <i data-lucide="arrow-down-up" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></th>
-                            <th>SCORE <i data-lucide="arrow-down-up" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-left:4px;"></i></th>
-                            <th>SMTP</th>
-                            <th>STATUS</th>
+                            <th style="min-width: 120px;">SERVER</th>
+                            <th style="min-width: 140px;">IP</th>
+                            <th>OWNER</th>
+                            <th style="text-align: center;">MON</th>
+                            <th style="text-align: center;">TUE</th>
+                            <th style="text-align: center;">WED</th>
+                            <th style="text-align: center;">THU</th>
+                            <th style="text-align: center;">FRI</th>
+                            <th style="text-align: center;">SAT</th>
+                            <th style="text-align: center;">SUN</th>
+                            <th>NOTES</th>
                         </tr>
                     </thead>
-                    <tbody id="blTableBody">
-                        <tr><td colspan="4" style="text-align:center; color:var(--text-secondary); padding: 3rem;">Ready to scan.</td></tr>
+                    <tbody id="trackingTableBody">
+                        <tr><td colspan="11" style="text-align:center; color:var(--text-secondary); padding: 3rem;">Loading data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -248,12 +233,24 @@
         // AUTO LOGIN AS ADMIN
         window.currentUser = { username: 'admin', role: 'admin', name: window.settings.adminName };
 
+        window.trackingData = {};
+        window.activeTrackTeam = 1;
+
         window.saveData = function() {
             db.ref('nexus').set({
                 projects: window.projects,
                 servers: window.servers,
                 teams: window.teamNames,
-                settings: window.settings
+                settings: window.settings,
+                tracking: window.trackingData
+            }).then(() => {
+                const saveBtn = document.querySelector('#trackingView .bl-btn-primary');
+                if(saveBtn && saveBtn.innerHTML.includes('Save')) {
+                    const oldHtml = saveBtn.innerHTML;
+                    saveBtn.innerHTML = '<i data-lucide="check"></i> Saved!';
+                    if(window.lucide) window.lucide.createIcons();
+                    setTimeout(() => { saveBtn.innerHTML = oldHtml; if(window.lucide) window.lucide.createIcons(); }, 2000);
+                }
             }).catch(err => {
                 alert("Firebase save error: " + err.message);
             });
@@ -292,10 +289,12 @@
                 window.servers = data.servers || [];
                 window.teamNames = data.teams || { team1: 'Team 1', team2: 'Team 2' };
                 window.settings = data.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
+                window.trackingData = data.tracking || {};
                 window.currentUser.name = window.settings.adminName;
                 const lEl = document.getElementById('fbLoader');
                 if(lEl) lEl.remove();
                 window.refreshUI();
+                if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
                 
                 // Set up real-time listener for ongoing updates
                 db.ref('nexus').on('value', (snap) => {
@@ -304,6 +303,12 @@
                     window.servers = rData.servers || [];
                     window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
                     window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
+                    
+                    const newTrackingStr = JSON.stringify(rData.tracking || {});
+                    if (JSON.stringify(window.trackingData) !== newTrackingStr) {
+                        window.trackingData = rData.tracking || {};
+                        if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
+                    }
                     window.refreshUI();
                 });
             }).catch(err => {
@@ -562,115 +567,71 @@
             if(window.lucide) lucide.createIcons();
         };
 
-        window.switchView = function(v, el) { document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if(el) el.classList.add('active'); document.querySelectorAll('.view').forEach(x => x.style.display = 'none'); document.getElementById(v + 'View').style.display = 'block'; };
-        window.handleProjectSubmit = function(e) { e.preventDefault(); const id = document.getElementById('projectId').value || Date.now().toString(); const d = { id, owner: document.getElementById('ownerName').value, name: document.getElementById('projectName').value, link: document.getElementById('projectLink').value, username: document.getElementById('username').value, password: document.getElementById('password').value }; const i = window.projects.findIndex(x => x.id === id); if(i > -1) window.projects[i] = d; else window.projects.push(d); window.saveData(); window.closeProjectModal(); };
-        window.deleteProject = function(id) { if(confirm('Del?')) { window.projects = window.projects.filter(p => p.id !== id); window.saveData(); } };
-        window.deleteUser = function(o) { if(confirm('Del User?')) { window.projects = window.projects.filter(p => p.owner !== o); window.saveData(); } };
-        window.deleteServer = function(id) { if(confirm('Del Server?')) { window.servers = window.servers.filter(s => s.id !== id); window.saveData(); } };
-        window.editProject = function(id) { const p = window.projects.find(x => x.id === id); if(p) { document.getElementById('projectId').value = p.id; document.getElementById('ownerName').value = p.owner; document.getElementById('projectName').value = p.name; document.getElementById('projectLink').value = p.link; document.getElementById('username').value = p.username; document.getElementById('password').value = p.password; document.getElementById('modalOverlay').style.display = 'flex'; } };
-        window.editServer = function(id) { const s = window.servers.find(x => x.id === id); if(s) { document.getElementById('serverId').value = s.id; document.getElementById('sName').value = s.name; document.getElementById('sIp').value = s.ip; document.getElementById('sStatus').value = s.status; document.getElementById('sClass').value = s.class; document.getElementById('sOwner').value = s.owner || ''; document.getElementById('sDate').value = s.date; document.getElementById('sNoticeDate').value = s.noticeDate; document.getElementById('sAsn').value = s.asn; document.getElementById('sNbrIp').value = s.nbrIp; document.getElementById('sTeam').value = s.team; document.getElementById('serverModalOverlay').style.display = 'flex'; } };
-        window.editTeamName = function(k) { const n = prompt('New Name:', window.teamNames[k]); if(n) { window.teamNames[k] = n; window.saveData(); } };
-        window.saveSettings = function(e) { e.preventDefault(); window.settings.adminName = document.getElementById('setAdminName').value; const p = document.getElementById('setAdminPass').value; if(p) window.settings.adminPass = p; window.saveData(); alert('Saved!'); };
-        
-        window.blState = { mode: 'domains', filter: 'all', results: [] };
-        
-        window.setBlMode = function(mode) {
-            window.blState.mode = mode;
-            document.getElementById('btnDomainsToggle').classList.toggle('active', mode === 'domains');
-            document.getElementById('btnIpsToggle').classList.toggle('active', mode === 'ips');
-        };
-        
-        window.setBlFilter = function(filter) {
-            window.blState.filter = filter;
-            const btns = document.getElementById('blStatusFilter').querySelectorAll('button');
-            btns.forEach(b => b.classList.remove('active'));
-            if(filter === 'all') btns[0].classList.add('active');
-            if(filter === 'clean') btns[1].classList.add('active');
-            if(filter === 'listed') btns[2].classList.add('active');
-            window.renderBlTable();
+        window.switchView = function(v, el) { 
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
+            if(el) el.classList.add('active'); 
+            document.querySelectorAll('.view').forEach(x => x.style.display = 'none'); 
+            document.getElementById(v + 'View').style.display = 'block'; 
+            if(v === 'tracking') window.renderTrackingTable();
         };
 
-        window.clearBlacklist = function() {
-            document.getElementById('blBulkInput').value = '';
-            window.blState.results = [];
-            window.renderBlTable();
+        window.setTrackTeam = function(team) {
+            window.activeTrackTeam = team;
+            document.getElementById('btnTrackTeam1').classList.toggle('active', team === 1);
+            document.getElementById('btnTrackTeam2').classList.toggle('active', team === 2);
+            window.renderTrackingTable();
         };
 
-        window.runBulkCheck = async function() {
-            const raw = document.getElementById('blBulkInput').value.trim();
-            if(!raw) return;
-            const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-            if(lines.length === 0) return;
-            
-            const tbody = document.getElementById('blTableBody');
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 3rem; color:var(--text-secondary);"><div style="display:inline-block; width:24px; height:24px; border:3px solid var(--border-color); border-top-color:var(--accent-color); border-radius:50%; animation:spin 1s linear infinite;"></div><div style="margin-top:1rem;">Scanning ${lines.length} targets...</div></td></tr>`;
-            
-            window.blState.results = [];
-            
-            // MOCK LOGIC for demo purposes (API ready)
-            for(let i = 0; i < lines.length; i++) {
-                const target = lines[i];
-                // Simulate network delay
-                await new Promise(r => setTimeout(r, 150));
-                
-                // Mock random data
-                const isListed = Math.random() > 0.7;
-                const score = isListed ? Math.floor(Math.random() * 50 + 50) : Math.floor(Math.random() * 20); // 0-20 clean, 50-100 listed
-                const status = isListed ? 'listed' : 'clean';
-                
-                window.blState.results.push({ target, score, smtp: 'Unknown', status });
-            }
-            
-            window.renderBlTable();
+        window.updateTrackCell = function(serverId, field, value) {
+            if(!window.trackingData[serverId]) window.trackingData[serverId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
+            window.trackingData[serverId][field] = value;
         };
-        
-        window.renderBlTable = function() {
-            const tbody = document.getElementById('blTableBody');
-            if(window.blState.results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary); padding: 3rem;">Ready to scan.</td></tr>';
-                if(window.lucide) window.lucide.createIcons();
+
+        window.renderTrackingTable = function() {
+            const tbody = document.getElementById('trackingTableBody');
+            if(!tbody) return;
+            const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
+            
+            if(teamServers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 3rem; color:var(--text-secondary);">No servers found for this team. Add servers in the Team view first.</td></tr>';
                 return;
             }
             
-            const sMin = parseFloat(document.getElementById('blScoreMin').value) || 0;
-            const sMax = parseFloat(document.getElementById('blScoreMax').value) || 100;
-            
+            const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
             let html = '';
-            window.blState.results.forEach(r => {
-                if(window.blState.filter !== 'all' && r.status !== window.blState.filter) return;
-                if(r.score < sMin || r.score > sMax) return;
+            
+            teamServers.forEach(s => {
+                const trk = window.trackingData[s.id] || { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                 
-                const sClass = r.status === 'clean' ? 'clean' : (r.status === 'listed' ? 'listed' : 'error');
-                const sText = r.status.toUpperCase();
+                let dayCells = days.map(d => 
+                    `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${s.id}', '${d}', this.value)" style="width:100%; min-width:50px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`
+                ).join('');
                 
-                html += `<tr>
-                    <td style="font-family:monospace; color:#fff;">${r.target}</td>
-                    <td style="font-weight:600; color:${r.status==='clean'?'#10b981':'#ef4444'}">${r.score}</td>
-                    <td><span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${r.smtp}</span></td>
-                    <td><span class="bl-status ${sClass}">${sText}</span></td>
+                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="font-weight:600; font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${s.name}</td>
+                    <td style="font-family:monospace; color:var(--accent-color); font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${s.ip}</td>
+                    <td style="padding: 8px 10px; white-space:nowrap;"><span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
+                    ${dayCells}
+                    <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" oninput="window.updateTrackCell('${s.id}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:120px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px; border-radius:4px; font-size:0.75rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
                 </tr>`;
             });
             
-            tbody.innerHTML = html || '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary); padding: 3rem;">No results match your filters.</td></tr>';
-            if(window.lucide) window.lucide.createIcons();
+            tbody.innerHTML = html;
         };
 
-        window.exportBlacklistCSV = function() {
-            if(window.blState.results.length === 0) return alert('No data to export');
-            let csv = 'Target,Score,SMTP,Status\n';
-            window.blState.results.forEach(r => { csv += `${r.target},${r.score},${r.smtp},${r.status}\n`; });
+        window.exportTrackingCSV = function() {
+            const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
+            if(teamServers.length === 0) return alert('No data to export');
+            let csv = 'Server,IP,Owner,Mon,Tue,Wed,Thu,Fri,Sat,Sun,Notes\n';
+            teamServers.forEach(s => {
+                const trk = window.trackingData[s.id] || {};
+                csv += `${s.name},${s.ip},${s.owner||''},${trk.mon||''},${trk.tue||''},${trk.wed||''},${trk.thu||''},${trk.fri||''},${trk.sat||''},${trk.sun||''},"${(trk.notes||'').replace(/"/g, '""')}"\n`;
+            });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = `spamhaus_scan_${Date.now()}.csv`;
+            a.href = url; a.download = `suivi_journalier_team${window.activeTrackTeam}_${Date.now()}.csv`;
             a.click(); window.URL.revokeObjectURL(url);
-        };
-
-        window.copyBlacklistResults = function() {
-            if(window.blState.results.length === 0) return alert('No data to copy');
-            let txt = 'TARGET\tSCORE\tSMTP\tSTATUS\n';
-            window.blState.results.forEach(r => { txt += `${r.target}\t${r.score}\t${r.smtp}\t${r.status.toUpperCase()}\n`; });
-            navigator.clipboard.writeText(txt).then(() => alert('Copied to clipboard!'));
         };
 
         window.onload = window.loadData;
