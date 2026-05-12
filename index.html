@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus | Premium Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div>
+        <nav class="nav-links">
+            <li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i data-lucide="settings"></i><span>Settings</span></a></li>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header>
+            <div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Rechercher..."></div>
+            <div class="user-profile"><div class="avatar">A</div><div class="user-info"><p style="font-weight:600;">Admin User</p></div></div>
+        </header>
+
+        <!-- DASHBOARD -->
+        <div id="dashboardView" class="view">
+            <h1 style="margin-bottom:2rem; font-family:'Outfit';">Analytics Dashboard</h1>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-info"><h3>Total Projects</h3><p id="totalProjects">0</p></div><div class="stat-icon"><i data-lucide="briefcase"></i></div></div>
+                <div class="stat-card"><div class="stat-info"><h3>Total Users</h3><p id="totalUsers">0</p></div><div class="stat-icon"><i data-lucide="users"></i></div></div>
+                <div class="stat-card"><div class="stat-info"><h3>Total Servers</h3><p id="totalServers">0</p></div><div class="stat-icon" style="color:var(--success-color);"><i data-lucide="server"></i></div></div>
+            </div>
+            <div class="card-container">
+                <div class="table-header"><h2>Projects by User</h2></div>
+                <div id="userStatsList" class="user-stats-list"></div>
+            </div>
+        </div>
+
+        <!-- PROJECTS -->
+        <div id="projectsView" class="view" style="display:none;">
+            <div class="table-header">
+                <h2>Manage Projects</h2>
+                <div style="display:flex;gap:1rem;">
+                    <button class="btn-secondary" onclick="window.clearAllData()">Clear All</button>
+                    <button class="btn-primary" onclick="window.openProjectModal()">Add Project</button>
+                </div>
+            </div>
+            <div id="projectGrid" class="project-grid"></div>
+        </div>
+
+        <!-- TEAM -->
+        <div id="teamView" class="view" style="display:none;">
+            <div class="table-header" style="margin-bottom:2rem;"><h2>Team Server Management</h2><button class="btn-primary" onclick="window.openServerModal()">Add Server</button></div>
+            <div class="team-grid">
+                <div class="team-column">
+                    <div class="team-header team-1" style="justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;"><i data-lucide="shield-check"></i><span id="team1Title">Team 1</span></div>
+                        <button class="action-btn" onclick="window.editTeamName('team1')"><i data-lucide="edit-3" size="14"></i></button>
+                    </div>
+                    <div class="server-table-container"><table class="server-table"><thead><tr><th>Server</th><th>IP</th><th>Provider</th><th>IPs</th><th>Actions</th></tr></thead><tbody id="team1ServerTable"></tbody></table></div>
+                </div>
+                <div class="team-column">
+                    <div class="team-header team-2" style="justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;"><i data-lucide="zap"></i><span id="team2Title">Team 2</span></div>
+                        <button class="action-btn" onclick="window.editTeamName('team2')"><i data-lucide="edit-3" size="14"></i></button>
+                    </div>
+                    <div class="server-table-container"><table class="server-table"><thead><tr><th>Server</th><th>IP</th><th>Provider</th><th>IPs</th><th>Actions</th></tr></thead><tbody id="team2ServerTable"></tbody></table></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Project Modal -->
+    <div class="modal-overlay" id="modalOverlay"><div class="modal"><h2>Project</h2><form onsubmit="window.handleProjectSubmit(event)"><input type="hidden" id="projectId"><div class="form-group"><label>Owner</label><input type="text" id="ownerName" required></div><div class="form-group"><label>Project Name</label><input type="text" id="projectName" required></div><div class="form-group"><label>Link</label><input type="url" id="projectLink" required></div><div class="form-group"><label>Username</label><input type="text" id="username" required></div><div class="form-group"><label>Password</label><input type="password" id="password" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeProjectModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
+
+    <!-- Server Modal -->
+    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server</h2><form onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId"><div class="form-group"><label>Name</label><input type="text" id="serverName" required></div><div class="form-group"><label>IP</label><input type="text" id="mainIP" required></div><div class="form-group"><label>Provider</label><input type="text" id="provider" required></div><div class="form-group"><label>IPs</label><input type="number" id="nbrIP" required></div><div class="form-group"><label>Team</label><select id="serverTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
+
+    <script>
+        // DATA
+        window.projects = JSON.parse(localStorage.getItem('nexus_projects')) || [];
+        window.servers = JSON.parse(localStorage.getItem('nexus_servers')) || [];
+        window.teamNames = JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' };
+
+        window.saveData = function() {
+            localStorage.setItem('nexus_projects', JSON.stringify(window.projects));
+            localStorage.setItem('nexus_servers', JSON.stringify(window.servers));
+            localStorage.setItem('nexus_teams', JSON.stringify(window.teamNames));
+            window.refreshUI();
+        };
+
+        // NAVIGATION
+        window.switchView = function(view, el) {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            if(el) el.classList.add('active');
+            document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+            document.getElementById(view + 'View').style.display = 'block';
+        };
+
+        // MODALS
+        window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
+        window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
+        window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
+        window.closeServerModal = function() { document.getElementById('serverModalOverlay').style.display = 'none'; };
+
+        // HANDLERS
+        window.handleProjectSubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('projectId').value || Date.now().toString();
+            const data = { id, owner: document.getElementById('ownerName').value, name: document.getElementById('projectName').value, link: document.getElementById('projectLink').value, username: document.getElementById('username').value, password: document.getElementById('password').value };
+            const idx = window.projects.findIndex(p => p.id === id);
+            if(idx > -1) window.projects[idx] = data; else window.projects.push(data);
+            window.saveData(); window.closeProjectModal();
+        };
+
+        window.handleServerSubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('serverId').value || Date.now().toString();
+            const data = { id, name: document.getElementById('serverName').value, ip: document.getElementById('mainIP').value, provider: document.getElementById('provider').value, nbrIP: document.getElementById('nbrIP').value, team: document.getElementById('serverTeam').value };
+            const idx = window.servers.findIndex(s => s.id === id);
+            if(idx > -1) window.servers[idx] = data; else window.servers.push(data);
+            window.saveData(); window.closeServerModal();
+        };
+
+        // ACTIONS
+        window.deleteProject = function(id) { if(confirm('Supprimer ce projet ?')) { window.projects = window.projects.filter(p => p.id !== id); window.saveData(); } };
+        window.deleteUser = function(owner) { if(confirm(`Supprimer ${owner} et tous ses projets ?`)) { window.projects = window.projects.filter(p => p.owner !== owner); window.saveData(); } };
+        window.deleteServer = function(id) { if(confirm('Supprimer ce serveur ?')) { window.servers = window.servers.filter(s => s.id !== id); window.saveData(); } };
+        
+        window.editProject = function(id) {
+            const p = window.projects.find(x => x.id === id);
+            if(p) {
+                document.getElementById('projectId').value = p.id;
+                document.getElementById('ownerName').value = p.owner;
+                document.getElementById('projectName').value = p.name;
+                document.getElementById('projectLink').value = p.link;
+                document.getElementById('username').value = p.username;
+                document.getElementById('password').value = p.password;
+                document.getElementById('modalOverlay').style.display = 'flex';
+            }
+        };
+
+        window.editServer = function(id) {
+            const s = window.servers.find(x => x.id === id);
+            if(s) {
+                document.getElementById('serverId').value = s.id;
+                document.getElementById('serverName').value = s.name;
+                document.getElementById('mainIP').value = s.ip;
+                document.getElementById('provider').value = s.provider;
+                document.getElementById('nbrIP').value = s.nbrIP;
+                document.getElementById('serverTeam').value = s.team;
+                document.getElementById('serverModalOverlay').style.display = 'flex';
+            }
+        };
+
+        window.editTeamName = function(key) {
+            const n = prompt('Nouveau nom pour ' + window.teamNames[key], window.teamNames[key]);
+            if(n) { window.teamNames[key] = n; window.saveData(); }
+        };
+
+        window.togglePass = function(id, pass) {
+            const el = document.getElementById('pass-'+id);
+            el.textContent = el.textContent === '••••••••' ? pass : '••••••••';
+        };
+
+        window.clearAllData = function() { if(confirm('RESET TOUT ?')) { window.projects = []; window.servers = []; window.saveData(); } };
+
+        // UI
+        window.refreshUI = function() {
+            document.getElementById('totalProjects').textContent = window.projects.length;
+            const uniqueOwners = [...new Set(window.projects.map(p => p.owner))];
+            document.getElementById('totalUsers').textContent = uniqueOwners.length;
+            document.getElementById('totalServers').textContent = window.servers.length;
+
+            const sl = document.getElementById('userStatsList');
+            sl.innerHTML = uniqueOwners.map(o => {
+                const count = window.projects.filter(p => p.owner === o).length;
+                return `<div class="user-stat-item"><span>${o}</span><span class="user-stat-count">${count} Projets</span></div>`;
+            }).join('') || '<p>Aucun utilisateur.</p>';
+
+            const grid = document.getElementById('projectGrid'); grid.innerHTML = '';
+            const grouped = window.projects.reduce((a, p) => { (a[p.owner] = a[p.owner] || []).push(p); return a; }, {});
+            Object.keys(grouped).forEach(o => {
+                const card = document.createElement('div'); card.className = 'user-card';
+                card.innerHTML = `<div class="user-card-header"><div style="display:flex;align-items:center;gap:1rem;"><div class="avatar">${o.charAt(0).toUpperCase()}</div><h3>${o}</h3></div><button class="action-btn" onclick="window.deleteUser('${o}')"><i data-lucide="user-minus"></i></button></div>
+                    <div class="project-list">${grouped[o].map(p => `
+                        <div class="project-item">
+                            <span class="project-item-name">${p.name}</span>
+                            <div style="font-size:0.75rem;color:var(--text-secondary);word-break:break-all;">${p.link}</div>
+                            <div class="project-item-meta">
+                                <div style="font-size:0.7rem;">User: <code>${p.username}</code><br>Pass: <span id="pass-${p.id}">••••••••</span> <button class="action-btn" onclick="window.togglePass('${p.id}','${p.password}')" style="width:16px;height:16px;display:inline-flex;align-items:center;"><i data-lucide="eye" size="10"></i></button></div>
+                                <div class="project-item-actions"><button class="action-btn" onclick="window.editProject('${p.id}')"><i data-lucide="edit-2"></i></button><button class="action-btn btn-delete" onclick="window.deleteProject('${p.id}')"><i data-lucide="trash-2"></i></button></div>
+                            </div>
+                        </div>`).join('')}</div>`;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('team1Title').textContent = window.teamNames.team1;
+            document.getElementById('team2Title').textContent = window.teamNames.team2;
+            const t1 = document.getElementById('team1ServerTable'); const t2 = document.getElementById('team2ServerTable');
+            t1.innerHTML = ''; t2.innerHTML = '';
+            window.servers.forEach(s => {
+                const r = `<tr><td>${s.name}</td><td>${s.ip}</td><td>${s.provider}</td><td>${s.nbrIP}</td><td><div class="project-item-actions"><button class="action-btn" onclick="window.editServer('${s.id}')"><i data-lucide="edit-2"></i></button><button class="action-btn btn-delete" onclick="window.deleteServer('${s.id}')"><i data-lucide="trash-2"></i></button></div></td></tr>`;
+                if(s.team === '1') t1.innerHTML += r; else t2.innerHTML += r;
+            });
+            if(window.lucide) lucide.createIcons();
+        };
+
+        window.onload = window.refreshUI;
+    </script>
+</body>
+</html>
