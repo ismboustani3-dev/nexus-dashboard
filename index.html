@@ -190,34 +190,58 @@
             const f = document.getElementById('fileInput').files[0];
             const t = document.getElementById('importTeam').value;
             const txt = document.getElementById('importText').value.trim();
-            if (f) { const r = new FileReader(); r.onload = (e) => window.process(e.target.result, t); r.readAsText(f); } else if (txt) { window.process(txt, t); }
+            if (f) { 
+                const r = new FileReader(); 
+                r.onload = (e) => {
+                    let content = e.target.result;
+                    // Remove BOM characters if present
+                    content = content.replace(/^\uFEFF/, "");
+                    window.process(content, t);
+                };
+                r.onerror = () => alert("Error reading file!");
+                r.readAsText(f); 
+            } else if (txt) { 
+                window.process(txt, t); 
+            } else {
+                alert('Please select a file or paste your data!');
+            }
         };
 
         window.process = function(raw, team) {
-            const lines = raw.split(/\r?\n/);
-            let count = 0;
-            lines.forEach((line, idx) => {
-                if(!line.trim() || idx === 0 && line.toLowerCase().includes('servers')) return;
-                const p = line.split(/[;,\t]/);
-                if(p.length >= 2) {
-                    window.servers.push({
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                        name: p[0] || 'Srv',
-                        ip: p[1] || '',
-                        status: p[2] || 'Active',
-                        class: p[3] || '',
-                        date: p[4] || '',
-                        entre: p[5] || '',
-                        notice: p[6] || '',
-                        noticeDate: p[7] || '',
-                        asn: p[8] || '',
-                        nbrIp: p[9] || '0',
-                        team: team
-                    });
-                    count++;
-                }
-            });
-            window.saveData(); window.closeImportModal(); alert('Imported ' + count + ' servers!');
+            try {
+                const lines = raw.split(/\r?\n/);
+                let count = 0;
+                lines.forEach((line, idx) => {
+                    const cleanLine = line.trim();
+                    if(!cleanLine || idx === 0 && cleanLine.toLowerCase().includes('servers')) return;
+                    
+                    const p = cleanLine.split(/[;,\t]/);
+                    if(p.length >= 2) {
+                        window.servers.push({
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                            name: p[0] ? p[0].trim() : 'Srv',
+                            ip: p[1] ? p[1].trim() : '',
+                            status: p[2] ? p[2].trim() : 'Active',
+                            class: p[3] ? p[3].trim() : '',
+                            date: p[4] ? p[4].trim() : '',
+                            entre: p[5] ? p[5].trim() : '',
+                            notice: p[6] ? p[6].trim() : '',
+                            noticeDate: p[7] ? p[7].trim() : '',
+                            asn: p[8] ? p[8].trim() : '',
+                            nbrIp: p[9] ? p[9].trim() : '0',
+                            team: team.toString()
+                        });
+                        count++;
+                    }
+                });
+                window.saveData(); 
+                window.closeImportModal(); 
+                alert('Success: ' + count + ' servers added to Team ' + team);
+                // Clear file input for next use
+                document.getElementById('fileInput').value = "";
+            } catch (err) {
+                alert("Processing Error: " + err.message);
+            }
         };
 
         window.handleServerSubmit = function(e) {
