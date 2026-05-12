@@ -6,6 +6,8 @@
     <title>Nexus | Premium Admin Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
         .login-screen { display: none; }
         .admin-only { display: block; }
@@ -137,20 +139,71 @@
     <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2><div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Assign to Owner (Optional)</label><input type="text" id="importOwner" placeholder="Owner name..."></div><div class="import-box" onclick="document.getElementById('fileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="fileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div></div></div>
 
     <script>
-        window.projects = JSON.parse(localStorage.getItem('nexus_projects')) || [];
-        window.servers = JSON.parse(localStorage.getItem('nexus_servers')) || [];
-        window.teamNames = JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' };
-        window.settings = JSON.parse(localStorage.getItem('nexus_settings')) || { adminName: 'Admin', adminPass: 'admin', users: [] };
+        const firebaseConfig = {
+          apiKey: "AIzaSyDkx9FZ_TjNYzz9J6-rdtkKk72HCu1bSOY",
+          authDomain: "ismail-f50ba.firebaseapp.com",
+          databaseURL: "https://ismail-f50ba-default-rtdb.firebaseio.com",
+          projectId: "ismail-f50ba",
+          storageBucket: "ismail-f50ba.firebasestorage.app",
+          messagingSenderId: "580219017127",
+          appId: "1:580219017127:web:4ae7026d3e5047994a4882",
+          measurementId: "G-5JTFLKN52B"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        window.projects = [];
+        window.servers = [];
+        window.teamNames = { team1: 'Team 1', team2: 'Team 2' };
+        window.settings = { adminName: 'Admin', adminPass: 'admin', users: [] };
         
         // AUTO LOGIN AS ADMIN
         window.currentUser = { username: 'admin', role: 'admin', name: window.settings.adminName };
 
         window.saveData = function() {
-            localStorage.setItem('nexus_projects', JSON.stringify(window.projects));
-            localStorage.setItem('nexus_servers', JSON.stringify(window.servers));
-            localStorage.setItem('nexus_teams', JSON.stringify(window.teamNames));
-            localStorage.setItem('nexus_settings', JSON.stringify(window.settings));
-            window.refreshUI();
+            db.ref('nexus').set({
+                projects: window.projects,
+                servers: window.servers,
+                teams: window.teamNames,
+                settings: window.settings
+            }).catch(err => {
+                alert("Firebase save error: " + err.message);
+            });
+        };
+
+        window.loadData = function() {
+            const loader = document.createElement('div');
+            loader.id = 'fbLoader';
+            loader.innerHTML = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;justify-content:center;align-items:center;color:#00f2fe;font-family:\'Outfit\';font-size:1.5rem;flex-direction:column;gap:1rem;"><div>Connecting to Firebase Cloud...</div><div style="width:50px;height:50px;border:4px solid rgba(0,242,254,0.2);border-top:4px solid #00f2fe;border-radius:50%;animation:spin 1s linear infinite;"></div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></div>';
+            document.body.appendChild(loader);
+
+            // Fetch once
+            db.ref('nexus').once('value').then((snapshot) => {
+                const data = snapshot.val() || {};
+                window.projects = data.projects || [];
+                window.servers = data.servers || [];
+                window.teamNames = data.teams || { team1: 'Team 1', team2: 'Team 2' };
+                window.settings = data.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
+                window.currentUser.name = window.settings.adminName;
+                const lEl = document.getElementById('fbLoader');
+                if(lEl) lEl.remove();
+                window.refreshUI();
+                
+                // Set up real-time listener for ongoing updates
+                db.ref('nexus').on('value', (snap) => {
+                    const rData = snap.val() || {};
+                    window.projects = rData.projects || [];
+                    window.servers = rData.servers || [];
+                    window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
+                    window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
+                    window.refreshUI();
+                });
+            }).catch(err => {
+                alert("Firebase connection error: " + err.message);
+                const lEl = document.getElementById('fbLoader');
+                if(lEl) lEl.remove();
+                window.refreshUI();
+            });
         };
 
         window.logout = function() { if(confirm('Reset App Data?')) { localStorage.clear(); location.reload(); } };
@@ -410,7 +463,7 @@
         window.editServer = function(id) { const s = window.servers.find(x => x.id === id); if(s) { document.getElementById('serverId').value = s.id; document.getElementById('sName').value = s.name; document.getElementById('sIp').value = s.ip; document.getElementById('sStatus').value = s.status; document.getElementById('sClass').value = s.class; document.getElementById('sOwner').value = s.owner || ''; document.getElementById('sDate').value = s.date; document.getElementById('sNoticeDate').value = s.noticeDate; document.getElementById('sAsn').value = s.asn; document.getElementById('sNbrIp').value = s.nbrIp; document.getElementById('sTeam').value = s.team; document.getElementById('serverModalOverlay').style.display = 'flex'; } };
         window.editTeamName = function(k) { const n = prompt('New Name:', window.teamNames[k]); if(n) { window.teamNames[k] = n; window.saveData(); } };
         window.saveSettings = function(e) { e.preventDefault(); window.settings.adminName = document.getElementById('setAdminName').value; const p = document.getElementById('setAdminPass').value; if(p) window.settings.adminPass = p; window.saveData(); alert('Saved!'); };
-        window.onload = window.refreshUI;
+        window.onload = window.loadData;
     </script>
 </body>
 </html>
