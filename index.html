@@ -20,7 +20,7 @@
         .import-box:hover { border-color: var(--accent-color); background: rgba(0,242,254,0.05); }
         .filter-bar { background: var(--card-bg); padding: 1rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center; }
         .filter-bar select { background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; outline: none; }
-        .proj-owner-block { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; transition: all 0.3s; }
+        .proj-owner-block { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; transition: all 0.3s; height: fit-content; }
         .proj-owner-block:hover { border-color: rgba(0,242,254,0.3); }
         .proj-owner-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-color); }
         .proj-owner-header h3 { font-family: 'Outfit'; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; }
@@ -60,7 +60,7 @@
                 <h1 style="font-family: 'Outfit';">Project Management</h1>
                 <button class="btn-primary" onclick="window.openProjectModal()"><i data-lucide="plus" size="14"></i> Add Project</button>
             </div>
-            <div id="projectGrid"></div>
+            <div id="projectGrid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;"></div>
         </div>
         
         <div id="teamView" class="view" style="display:none;">
