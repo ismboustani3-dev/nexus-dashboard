@@ -83,6 +83,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <h1 style="font-family: 'Outfit';">Infrastructure Management</h1>
                 <div style="display:flex; gap:1rem;">
+                    <button class="btn-secondary" onclick="window.removeDuplicateServers()"><i data-lucide="trash-2" size="14"></i> Dedup</button>
                     <button class="btn-secondary" onclick="window.openImportModal()"><i data-lucide="upload" size="14"></i> Import</button>
                     <button class="btn-primary" onclick="window.openServerModal()">Add Server</button>
                 </div>
@@ -221,6 +222,26 @@
             });
             window.saveData();
             inputEl.value = '';
+        };
+        window.removeDuplicateServers = function() {
+            const initialCount = window.servers.length;
+            const uniqueServers = [];
+            const ipSet = new Set();
+            for (const s of window.servers) {
+                if (s.ip && ipSet.has(s.ip)) continue;
+                if (s.ip) ipSet.add(s.ip);
+                uniqueServers.push(s);
+            }
+            const removed = initialCount - uniqueServers.length;
+            if (removed > 0) {
+                if (confirm(`Found ${removed} duplicate server(s) based on IP. Remove them?`)) {
+                    window.servers = uniqueServers;
+                    window.saveData();
+                    alert(`${removed} duplicates removed!`);
+                }
+            } else {
+                alert('No duplicate IPs found!');
+            }
         };
         window.handleServerSubmit = function(e) {
             e.preventDefault(); const id = document.getElementById('serverId').value || Date.now().toString();
