@@ -103,38 +103,21 @@
                     const clean = line.trim(); if(!clean || (idx === 0 && clean.toLowerCase().includes('server'))) return;
                     const p = clean.split(/[;,\t]/);
                     
-                    if(p.length === 8) {
-                        // 8-column format: server;statut;class;date entre;notice;date;AASN;nbr ip
+                    if(p.length >= 8) {
+                        // Format: SERVERS;main ip server;statut;class;date entre;notice date;ASN;nbr ip
                         window.servers.push({
                             id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
                             name: (p[0] || '').trim(),
-                            ip: (p[0] || '').trim(), // Assuming server name might be the IP if not separate
-                            status: (p[1] || '').trim(),
-                            class: (p[2] || '').trim(),
-                            date: (p[3] || '').trim(),
-                            entre: '',
-                            notice: (p[4] || '').trim(),
+                            ip: (p[1] || '').trim(),
+                            status: (p[2] || '').trim(),
+                            class: (p[3] || '').trim(),
+                            date: (p[4] || '').trim(),
+                            entre: '', // Empty for now
+                            notice: '', // Empty for now
                             noticeDate: (p[5] || '').trim(),
                             asn: (p[6] || '').trim(),
                             nbrIp: (p[7] || '0').trim(),
                             team: team.toString()
-                        });
-                        count++;
-                    } else if(p.length >= 9) {
-                        // 10-column or more format
-                        window.servers.push({ 
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4), 
-                            name: (p[0] || '').trim(), 
-                            ip: (p[1] || '').trim(), 
-                            status: (p[2] || '').trim(), 
-                            class: (p[3] || '').trim(), 
-                            date: (p[4] || '').trim(), 
-                            entre: (p[5] || '').trim(), 
-                            notice: (p[6] || '').trim(), 
-                            noticeDate: (p[7] || '').trim(), 
-                            asn: (p[8] || '').trim(), 
-                            nbrIp: (p[9] || '0').trim(), 
-                            team: team.toString() 
                         });
                         count++;
                     }
