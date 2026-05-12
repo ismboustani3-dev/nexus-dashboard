@@ -63,6 +63,13 @@
                     <button class="btn-primary" onclick="window.openProjectModal()"><i data-lucide="plus" size="14"></i> Add Project</button>
                 </div>
             </div>
+
+            <div class="team-analytics" id="projStats">
+                <div class="analytics-card"><h4>Total Projects</h4><div class="val" id="projTotalCount">0</div></div>
+                <div class="analytics-card"><h4>Total Owners</h4><div class="val" id="projOwnerCount">0</div></div>
+                <div class="analytics-card" style="grid-column: span 2;"><h4>Projects per Owner</h4><div id="projOwnerDistribution" style="margin-top:10px;"></div></div>
+            </div>
+
             <div id="projectGrid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;"></div>
         </div>
         
@@ -229,7 +236,18 @@
             
             let vP = window.projects;
             document.getElementById('totalProjects').textContent = vP.length;
-            document.getElementById('totalUsers').textContent = [...new Set(vP.map(p => p.owner))].length;
+            const ownersList = [...new Set(vP.map(p => p.owner))];
+            document.getElementById('totalUsers').textContent = ownersList.length;
+            
+            // Project Stats
+            document.getElementById('projTotalCount').textContent = vP.length;
+            document.getElementById('projOwnerCount').textContent = ownersList.length;
+            const ownerCounts = vP.reduce((a, p) => { a[p.owner] = (a[p.owner] || 0) + 1; return a; }, {});
+            const distEl = document.getElementById('projOwnerDistribution');
+            distEl.innerHTML = Object.entries(ownerCounts).map(([owner, count]) => {
+                const perc = vP.length > 0 ? ((count / vP.length) * 100).toFixed(0) : 0;
+                return `<div style="margin-bottom:8px;"><div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:2px;"><span>${owner}</span><span style="color:var(--accent-color); font-weight:bold;">${count} (${perc}%)</span></div><div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;"><div style="height:100%; width:${perc}%; background:var(--accent-color); border-radius:2px; transition:width 0.5s;"></div></div></div>`;
+            }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No projects yet.</div>';
             const pGrid = document.getElementById('projectGrid'); pGrid.innerHTML = '';
             const grouped = vP.reduce((a, p) => { (a[p.owner] = a[p.owner] || []).push(p); return a; }, {});
             Object.keys(grouped).forEach(o => {
