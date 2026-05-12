@@ -107,10 +107,10 @@
             </div>
 
             <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem; margin-bottom:2rem;">
-                <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add — Format: team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
-                <div style="display:flex; gap:0.5rem;">
-                    <input type="text" id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none;">
-                    <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap;">Add</button>
+                <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Multiple lines supported) — Format: team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
+                <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                    <textarea id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5&#10;2;srv_002;192.168.1.2;PROD;29;01/01/2026;01/06/2026;AWS;10" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
+                    <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Add Servers</button>
                 </div>
             </div>
 
@@ -200,28 +200,45 @@
             const inputEl = document.getElementById('quickAddInput');
             const val = inputEl.value.trim();
             if(!val) return;
-            const p = val.split(';');
-            if(p.length < 9) {
-                alert('Invalid format. Need exactly 9 parts separated by semicolons.');
-                return;
-            }
-            window.servers.push({
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                team: (p[0] || '1').trim(),
-                name: (p[1] || '').trim(),
-                ip: (p[2] || '').trim(),
-                status: (p[3] || '').trim(),
-                class: (p[4] || '').trim(),
-                date: (p[5] || '').trim(),
-                entre: '',
-                notice: '',
-                noticeDate: (p[6] || '').trim(),
-                asn: (p[7] || '').trim(),
-                nbrIp: (p[8] || '0').trim(),
-                owner: ''
+            const lines = val.split(/\r?\n/);
+            let addedCount = 0;
+            let errors = 0;
+            
+            lines.forEach(line => {
+                const clean = line.trim();
+                if (!clean) return;
+                const p = clean.split(';');
+                if(p.length < 9) {
+                    errors++;
+                    return;
+                }
+                window.servers.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                    team: (p[0] || '1').trim(),
+                    name: (p[1] || '').trim(),
+                    ip: (p[2] || '').trim(),
+                    status: (p[3] || '').trim(),
+                    class: (p[4] || '').trim(),
+                    date: (p[5] || '').trim(),
+                    entre: '',
+                    notice: '',
+                    noticeDate: (p[6] || '').trim(),
+                    asn: (p[7] || '').trim(),
+                    nbrIp: (p[8] || '0').trim(),
+                    owner: ''
+                });
+                addedCount++;
             });
-            window.saveData();
-            inputEl.value = '';
+            
+            if (addedCount > 0) {
+                window.saveData();
+                inputEl.value = '';
+                let msg = `Successfully added ${addedCount} server(s).`;
+                if (errors > 0) msg += `\nWarning: ${errors} line(s) were ignored due to incorrect format.`;
+                alert(msg);
+            } else if (errors > 0) {
+                alert(`Failed to add servers. ${errors} line(s) had an incorrect format. Make sure you use 9 parts separated by semicolons.`);
+            }
         };
         window.removeDuplicateServers = function() {
             const initialCount = window.servers.length;
