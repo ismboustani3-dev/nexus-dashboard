@@ -139,21 +139,29 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:2rem;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:1.5rem;">
                 <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
-                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Multi-line) — Format: team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
+                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Complex) — team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
                     <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                        <textarea id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5&#10;2;srv_002;192.168.1.2;PROD;29;01/01/2026;01/06/2026;AWS;10" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
-                        <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Add Servers</button>
+                        <textarea id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
+                        <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap; padding: 10px 20px;">Add</button>
                     </div>
                 </div>
 
                 <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
-                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Delete (Multi-line) — Paste Server Names (SERVERS)</p>
+                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Delete — Paste Server Names (One per line)</p>
                     <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                         <textarea id="quickDeleteInput" placeholder="srv_001&#10;srv_002" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
-                        <button onclick="window.quickDeleteServer()" style="white-space:nowrap; padding: 10px 20px; height: 100%; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.5); color:#ef4444; border-radius:8px; cursor:pointer; font-weight:600; transition: 0.2s;">Delete Servers</button>
+                        <button onclick="window.quickDeleteServer()" style="white-space:nowrap; padding: 10px 20px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.5); color:#ef4444; border-radius:8px; cursor:pointer; font-weight:600;">Delete</button>
                     </div>
+                </div>
+            </div>
+
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem; margin-bottom: 2rem;">
+                <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;"><strong>Bulk Group Import</strong> — Format: <strong>ServerName;IP1,IP2...</strong> (Inherits current filters)</p>
+                <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                    <textarea id="simpleBulkInput" placeholder="srv_001;1.1.1.1,1.1.1.2&#10;srv_002;2.2.2.1" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:80px; resize:vertical;"></textarea>
+                    <button class="btn-primary" onclick="window.simpleBulkAdd()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Import Group</button>
                 </div>
             </div>
 
@@ -422,6 +430,57 @@
                 alert(`Failed to add servers. ${errors} line(s) had an incorrect format. Make sure you use 9 parts separated by semicolons.`);
             }
         };
+        window.simpleBulkAdd = function() {
+            const inputEl = document.getElementById('simpleBulkInput');
+            const val = inputEl.value.trim();
+            if(!val) return;
+            const lines = val.split(/\r?\n/);
+            let addedCount = 0;
+            
+            const activeOwnerFilter = document.getElementById('globalOwnerFilter').value;
+            const inheritedOwner = activeOwnerFilter !== 'all' ? activeOwnerFilter : '';
+            const activeTeamFilter = document.getElementById('teamViewFilter').value;
+            const inheritedTeam = (activeTeamFilter !== 'all' && activeTeamFilter !== '') ? activeTeamFilter : '1';
+
+            lines.forEach(line => {
+                const clean = line.trim();
+                if (!clean) return;
+                
+                const p = clean.split(';');
+                if (p.length >= 2) {
+                    const name = p[0].trim();
+                    const rawIps = p[1].trim();
+                    const ipsArray = rawIps.split(/[\s,]+/).filter(ip => ip);
+                    const formattedIps = ipsArray.join('\n');
+                    
+                    window.servers.push({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                        team: inheritedTeam,
+                        name: name,
+                        ip: formattedIps,
+                        status: 'Active',
+                        class: '',
+                        date: new Date().toLocaleDateString(),
+                        entre: '',
+                        notice: '',
+                        noticeDate: '',
+                        asn: '',
+                        nbrIp: ipsArray.length.toString(),
+                        owner: inheritedOwner
+                    });
+                    addedCount++;
+                }
+            });
+            
+            if (addedCount > 0) {
+                window.saveData();
+                inputEl.value = '';
+                alert(`Successfully added ${addedCount} server(s) to Team ${inheritedTeam}.`);
+                window.refreshUI();
+            } else {
+                alert('No servers added. Use format: Name;IP1,IP2...');
+            }
+        };
         window.quickDeleteServer = function() {
             const inputEl = document.getElementById('quickDeleteInput');
             const val = inputEl.value.trim();
@@ -437,6 +496,7 @@
                 window.saveData();
                 inputEl.value = '';
                 alert(`Successfully deleted ${deletedCount} server(s).`);
+                window.refreshUI();
             } else {
                 alert('No servers found matching those names.');
             }
