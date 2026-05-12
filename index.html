@@ -105,6 +105,14 @@
                 </div>
             </div>
 
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem; margin-bottom:2rem;">
+                <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add — Format: team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none;">
+                    <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap;">Add</button>
+                </div>
+            </div>
+
             <div id="teamGrid" class="team-grid"></div>
         </div>
 
@@ -186,6 +194,33 @@
                 });
                 window.saveData(); window.closeImportModal(); alert('Success: ' + count + ' servers added!');
             } catch (err) { alert("Error: " + err.message); }
+        };
+        window.quickAddServer = function() {
+            const inputEl = document.getElementById('quickAddInput');
+            const val = inputEl.value.trim();
+            if(!val) return;
+            const p = val.split(';');
+            if(p.length < 9) {
+                alert('Invalid format. Need exactly 9 parts separated by semicolons.');
+                return;
+            }
+            window.servers.push({
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                team: (p[0] || '1').trim(),
+                name: (p[1] || '').trim(),
+                ip: (p[2] || '').trim(),
+                status: (p[3] || '').trim(),
+                class: (p[4] || '').trim(),
+                date: (p[5] || '').trim(),
+                entre: '',
+                notice: '',
+                noticeDate: (p[6] || '').trim(),
+                asn: (p[7] || '').trim(),
+                nbrIp: (p[8] || '0').trim(),
+                owner: ''
+            });
+            window.saveData();
+            inputEl.value = '';
         };
         window.handleServerSubmit = function(e) {
             e.preventDefault(); const id = document.getElementById('serverId').value || Date.now().toString();
