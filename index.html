@@ -64,6 +64,12 @@
                 </div>
             </div>
 
+            <div class="filter-bar">
+                <i data-lucide="filter" size="18"></i>
+                <span style="font-size:0.9rem; color:var(--text-secondary);">Owner:</span>
+                <select id="projOwnerFilter" onchange="window.refreshUI()"><option value="all">All Owners</option></select>
+            </div>
+
             <div class="team-analytics" id="projStats">
                 <div class="analytics-card"><h4>Total Projects</h4><div class="val" id="projTotalCount">0</div></div>
                 <div class="analytics-card"><h4>Total Owners</h4><div class="val" id="projOwnerCount">0</div></div>
@@ -235,13 +241,20 @@
             if(teamFilter === 'all' || teamFilter === '2') tg.innerHTML += render(2, window.teamNames.team2);
             
             let vP = window.projects;
-            document.getElementById('totalProjects').textContent = vP.length;
-            const ownersList = [...new Set(vP.map(p => p.owner))];
+            const projOwnerFilterEl = document.getElementById('projOwnerFilter');
+            const projFilterVal = projOwnerFilterEl.value;
+            const allProjOwners = [...new Set(vP.map(p => p.owner))];
+            projOwnerFilterEl.innerHTML = '<option value="all">All Owners</option>' + allProjOwners.map(o => `<option value="${o}" ${o === projFilterVal ? 'selected' : ''}>${o}</option>`).join('');
+            
+            if(projFilterVal !== 'all') vP = vP.filter(p => p.owner === projFilterVal);
+            
+            document.getElementById('totalProjects').textContent = window.projects.length;
+            const ownersList = allProjOwners;
             document.getElementById('totalUsers').textContent = ownersList.length;
             
             // Project Stats
             document.getElementById('projTotalCount').textContent = vP.length;
-            document.getElementById('projOwnerCount').textContent = ownersList.length;
+            document.getElementById('projOwnerCount').textContent = [...new Set(vP.map(p => p.owner))].length;
             const ownerCounts = vP.reduce((a, p) => { a[p.owner] = (a[p.owner] || 0) + 1; return a; }, {});
             const distEl = document.getElementById('projOwnerDistribution');
             distEl.innerHTML = Object.entries(ownerCounts).map(([owner, count]) => {
