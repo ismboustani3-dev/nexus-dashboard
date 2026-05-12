@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus | Multi-User Admin Dashboard</title>
+    <title>Nexus | Premium Admin Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
         .login-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 3rem; border-radius: 32px; width: 100%; max-width: 400px; text-align: center; }
-        .user-mgmt-card { margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 2rem; }
-        .access-tag { background: rgba(0, 242, 254, 0.1); color: var(--accent-color); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; }
         .admin-only { display: none; }
-        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
-        .status-active { background: rgba(0, 230, 118, 0.1); color: var(--success-color); }
-        .status-pending { background: rgba(255, 145, 0, 0.1); color: var(--warning-color); }
-        .status-cancelled { background: rgba(255, 75, 92, 0.1); color: var(--danger-color); }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+        .status-active { background: rgba(0, 230, 118, 0.1); color: #00e676; }
+        .status-pending { background: rgba(255, 145, 0, 0.1); color: #ff9100; }
+        .status-cancelled { background: rgba(255, 75, 92, 0.1); color: #ff4b5c; }
+        .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        @media (max-width: 1100px) { .team-grid { grid-template-columns: 1fr; } }
+        textarea.import-area { width: 100%; height: 200px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div id="loginScreen" class="login-screen" style="display: flex;">
         <div class="login-card">
             <div class="logo" style="justify-content:center; margin-bottom: 2rem;"><i data-lucide="layers" size="32"></i><span>Nexus</span></div>
@@ -28,12 +28,10 @@
                 <div class="form-group"><input type="text" id="loginUser" placeholder="Username (admin)" required></div>
                 <div class="form-group"><input type="password" id="loginPass" placeholder="Password (admin)" required></div>
                 <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">Sign In</button>
-                <p id="loginError" style="color: var(--danger-color); margin-top: 1rem; display: none;">Invalid credentials</p>
             </form>
         </div>
     </div>
 
-    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div>
         <nav class="nav-links">
@@ -45,105 +43,91 @@
         <div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Logout</span></a></div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
         <header>
             <div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div>
-            <div class="user-profile">
-                <div class="avatar" id="headerAvatar">A</div>
-                <div class="user-info">
-                    <p style="font-weight:600;" id="headerName">Admin</p>
-                    <p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p>
-                </div>
-            </div>
+            <div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div>
         </header>
 
-        <!-- DASHBOARD -->
         <div id="dashboardView" class="view">
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div>
                 <div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div>
                 <div class="stat-card admin-only"><div class="stat-info"><h3>Servers</h3><p id="totalServers">0</p></div></div>
             </div>
-            <div class="card-container">
-                <h2>Overview</h2>
-                <div id="userStatsList" class="user-stats-list"></div>
-            </div>
+            <div class="card-container"><h2>Overview</h2><div id="userStatsList" class="user-stats-list"></div></div>
         </div>
 
-        <!-- PROJECTS -->
         <div id="projectsView" class="view" style="display:none;">
-            <div class="table-header">
-                <h2>Manage Projects</h2>
-                <button class="btn-primary admin-only" onclick="window.openProjectModal()">Add Project</button>
-            </div>
+            <div class="table-header"><h2>Projects</h2><button class="btn-primary admin-only" onclick="window.openProjectModal()">Add Project</button></div>
             <div id="projectGrid" class="project-grid"></div>
         </div>
 
-        <!-- TEAM -->
         <div id="teamView" class="view" style="display:none;">
             <div class="table-header" style="margin-bottom: 2rem;">
                 <h2>Team Server Management</h2>
-                <button class="btn-primary" onclick="window.openServerModal()">Add Server</button>
+                <div style="display:flex; gap:1rem;">
+                    <button class="btn-secondary" onclick="window.openImportModal()">Import Data</button>
+                    <button class="btn-primary" onclick="window.openServerModal()">Add Server</button>
+                </div>
             </div>
-            <div class="team-grid" id="teamGrid">
-                <!-- Dynamically filled -->
-            </div>
+            <div class="team-grid" id="teamGrid"></div>
         </div>
 
-        <!-- SETTINGS -->
         <div id="settingsView" class="view" style="display:none;">
-            <h1 style="margin-bottom:2rem;">Settings</h1>
             <div class="card-container" style="max-width: 800px;">
                 <form onsubmit="window.saveSettings(event)">
                     <h2>Admin Profile</h2>
-                    <div class="form-group"><label>Display Name</label><input type="text" id="setAdminName" required></div>
-                    <div class="form-group"><label>Admin Password</label><input type="password" id="setAdminPass" placeholder="Change password..."></div>
-                    <button type="submit" class="btn-primary">Update Admin</button>
+                    <div class="form-group"><label>Name</label><input type="text" id="setAdminName" required></div>
+                    <div class="form-group"><label>Password</label><input type="password" id="setAdminPass" placeholder="New password..."></div>
+                    <button type="submit" class="btn-primary">Update</button>
                 </form>
                 <div class="user-mgmt-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                        <h2>User Management</h2>
-                        <button class="btn-primary" onclick="window.openUserModal()" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Create New User</button>
-                    </div>
-                    <div id="usersList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h2>Users</h2><button class="btn-primary" onclick="window.openUserModal()">Create User</button></div>
+                    <div id="usersList"></div>
                 </div>
             </div>
         </div>
     </main>
 
     <!-- Modals -->
-    <div class="modal-overlay" id="modalOverlay"><div class="modal"><h2>Project</h2><form id="projectForm" onsubmit="window.handleProjectSubmit(event)"><input type="hidden" id="projectId"><div class="form-group"><label>Owner</label><input type="text" id="ownerName" required></div><div class="form-group"><label>Project Name</label><input type="text" id="projectName" required></div><div class="form-group"><label>Link</label><input type="url" id="projectLink" required></div><div class="form-group"><label>Username</label><input type="text" id="username" required></div><div class="form-group"><label>Password</label><input type="password" id="password" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeProjectModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
+    <div class="modal-overlay" id="modalOverlay"><div class="modal"><h2>Project</h2><form id="projectForm" onsubmit="window.handleProjectSubmit(event)"><input type="hidden" id="projectId"><div class="form-group"><label>Owner</label><input type="text" id="ownerName" required></div><div class="form-group"><label>Project</label><input type="text" id="projectName" required></div><div class="form-group"><label>Link</label><input type="url" id="projectLink" required></div><div class="form-group"><label>User</label><input type="text" id="username" required></div><div class="form-group"><label>Pass</label><input type="password" id="password" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeProjectModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
     
-    <div class="modal-overlay" id="userModalOverlay"><div class="modal"><h2>Create User</h2><form onsubmit="window.handleUserSubmit(event)"><div class="form-group"><label>Username</label><input type="text" id="newUsername" required></div><div class="form-group"><label>Password</label><input type="password" id="newUserPass" required></div><div class="form-group"><label>Access to (Owners)</label><div id="ownersChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeUserModal()">Cancel</button><button type="submit" class="btn-primary">Create User</button></div></form></div></div>
+    <div class="modal-overlay" id="userModalOverlay"><div class="modal"><h2>User</h2><form onsubmit="window.handleUserSubmit(event)"><div class="form-group"><label>User</label><input type="text" id="newUsername" required></div><div class="form-group"><label>Pass</label><input type="password" id="newUserPass" required></div><div class="form-group"><label>Access (Owners)</label><div id="ownersChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeUserModal()">Cancel</button><button type="submit" class="btn-primary">Create</button></div></form></div></div>
 
-    <!-- Server Modal (Updated with requested fields) -->
-    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId">
-        <div class="form-group"><label>SERVERS (Name)</label><input type="text" id="sName" required></div>
-        <div class="form-group"><label>Main IP Server</label><input type="text" id="sIp" required></div>
+    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId">
+        <div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div>
+        <div class="form-group"><label>Main IP</label><input type="text" id="sIp" required></div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
             <div class="form-group"><label>Statut</label><select id="sStatus"><option value="Active">Active</option><option value="Pending">Pending</option><option value="Cancelled">Cancelled</option></select></div>
-            <div class="form-group"><label>Class</label><input type="text" id="sClass" placeholder="e.g. A"></div>
+            <div class="form-group"><label>Class</label><input type="text" id="sClass"></div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
             <div class="form-group"><label>Date Entrée</label><input type="date" id="sEntry" required></div>
             <div class="form-group"><label>Notice Date</label><input type="date" id="sNotice"></div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group"><label>AASN (ASN)</label><input type="text" id="sAsn"></div>
+            <div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div>
             <div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" required></div>
         </div>
-        <div class="form-group"><label>Assign Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div>
+        <div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div>
         <div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div>
     </form></div></div>
 
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="importModalOverlay"><div class="modal" style="max-width: 700px;"><h2>Bulk Import Servers</h2>
+        <div class="form-group"><label>Assign to Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div>
+        <div class="form-group"><label>Paste Data (Comma or Tab separated)</label><textarea class="import-area" id="importData" placeholder="Name, IP, Status, Class, EntryDate, NoticeDate, ASN, NbrIP"></textarea></div>
+        <p style="font-size:0.7rem; color:var(--text-secondary);">Format: ServerName, IP, Active, A, 2024-01-01, 2024-02-01, 12345, 5</p>
+        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Process Import</button></div>
+    </div></div>
+
     <script>
-        // DATA STATE
+        // DATA
         window.projects = JSON.parse(localStorage.getItem('nexus_projects')) || [];
         window.servers = JSON.parse(localStorage.getItem('nexus_servers')) || [];
         window.teamNames = JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' };
         window.settings = JSON.parse(localStorage.getItem('nexus_settings')) || { adminName: 'Admin', adminPass: 'admin', users: [] };
-        
         window.currentUser = null;
 
         window.saveData = function() {
@@ -159,35 +143,15 @@
             e.preventDefault();
             const u = document.getElementById('loginUser').value.toLowerCase();
             const p = document.getElementById('loginPass').value;
-            if(u === 'admin' && p === window.settings.adminPass) {
-                window.currentUser = { username: 'admin', role: 'admin', name: window.settings.adminName };
-                document.getElementById('loginScreen').style.display = 'none';
-                window.refreshUI();
-                return;
-            }
-            const sub = window.settings.users.find(user => user.username === u && user.password === p);
+            if(u === 'admin' && p === window.settings.adminPass) { window.currentUser = { username: 'admin', role: 'admin', name: window.settings.adminName }; document.getElementById('loginScreen').style.display = 'none'; window.refreshUI(); return; }
+            const sub = window.settings.users.find(x => x.username === u && x.password === p);
             if(sub) { window.currentUser = { ...sub, role: 'member' }; document.getElementById('loginScreen').style.display = 'none'; window.refreshUI(); }
             else { document.getElementById('loginError').style.display = 'block'; }
         };
 
         window.logout = function() { location.reload(); };
 
-        // MODALS
-        window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
-        window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
-        window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
-        window.closeServerModal = function() { document.getElementById('serverModalOverlay').style.display = 'none'; };
-
-        // HANDLERS
-        window.handleProjectSubmit = function(e) {
-            e.preventDefault();
-            const id = document.getElementById('projectId').value || Date.now().toString();
-            const data = { id, owner: document.getElementById('ownerName').value, name: document.getElementById('projectName').value, link: document.getElementById('projectLink').value, username: document.getElementById('username').value, password: document.getElementById('password').value };
-            const idx = window.projects.findIndex(p => p.id === id);
-            if(idx > -1) window.projects[idx] = data; else window.projects.push(data);
-            window.saveData(); window.closeProjectModal();
-        };
-
+        // SERVER LOGIC
         window.handleServerSubmit = function(e) {
             e.preventDefault();
             const id = document.getElementById('serverId').value || Date.now().toString();
@@ -208,89 +172,88 @@
             window.saveData(); window.closeServerModal();
         };
 
-        // ACTIONS
-        window.deleteProject = function(id) { if(confirm('Delete?')) { window.projects = window.projects.filter(p => p.id !== id); window.saveData(); } };
-        window.deleteUser = function(owner) { if(confirm('Delete?')) { window.projects = window.projects.filter(p => p.owner !== owner); window.saveData(); } };
-        window.deleteServer = function(id) { if(confirm('Delete Server?')) { window.servers = window.servers.filter(s => s.id !== id); window.saveData(); } };
-        
-        window.editProject = function(id) {
-            const p = window.projects.find(x => x.id === id);
-            if(p) {
-                document.getElementById('projectId').value = p.id;
-                document.getElementById('ownerName').value = p.owner;
-                document.getElementById('projectName').value = p.name;
-                document.getElementById('projectLink').value = p.link;
-                document.getElementById('username').value = p.username;
-                document.getElementById('password').value = p.password;
-                document.getElementById('modalOverlay').style.display = 'flex';
-            }
-        };
+        // IMPORT LOGIC
+        window.openImportModal = function() { document.getElementById('importData').value = ''; document.getElementById('importModalOverlay').style.display = 'flex'; };
+        window.closeImportModal = function() { document.getElementById('importModalOverlay').style.display = 'none'; };
 
-        window.editServer = function(id) {
-            const s = window.servers.find(x => x.id === id);
-            if(s) {
-                document.getElementById('serverId').value = s.id;
-                document.getElementById('sName').value = s.name;
-                document.getElementById('sIp').value = s.ip;
-                document.getElementById('sStatus').value = s.status;
-                document.getElementById('sClass').value = s.class;
-                document.getElementById('sEntry').value = s.entry;
-                document.getElementById('sNotice').value = s.notice;
-                document.getElementById('sAsn').value = s.asn;
-                document.getElementById('sNbrIp').value = s.nbrIp;
-                document.getElementById('sTeam').value = s.team;
-                document.getElementById('serverModalOverlay').style.display = 'flex';
-            }
+        window.handleImport = function() {
+            const raw = document.getElementById('importData').value.trim();
+            const team = document.getElementById('importTeam').value;
+            if(!raw) return alert('No data to import!');
+            
+            const lines = raw.split('\n');
+            let count = 0;
+            lines.forEach(line => {
+                const parts = line.split(/[,\t]/); // Split by comma or tab
+                if(parts.length >= 2) {
+                    window.servers.push({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                        name: parts[0]?.trim() || 'Imported Server',
+                        ip: parts[1]?.trim() || '',
+                        status: parts[2]?.trim() || 'Active',
+                        class: parts[3]?.trim() || '',
+                        entry: parts[4]?.trim() || new Date().toISOString().split('T')[0],
+                        notice: parts[5]?.trim() || '',
+                        asn: parts[6]?.trim() || '',
+                        nbrIp: parts[7]?.trim() || '0',
+                        team: team
+                    });
+                    count++;
+                }
+            });
+            window.saveData();
+            window.closeImportModal();
+            alert(`Successfully imported ${count} servers!`);
         };
 
         // UI REFRESH
         window.refreshUI = function() {
             if(!window.currentUser) return;
             document.getElementById('headerName').textContent = window.currentUser.name || window.currentUser.username;
-            document.getElementById('userRole').textContent = window.currentUser.role === 'admin' ? 'Administrator' : 'Team Member';
-            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = window.currentUser.role === 'admin' ? 'block' : 'none'; });
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = window.currentUser.role === 'admin' ? 'block' : 'none');
 
-            let visibleProjects = window.projects;
-            if(window.currentUser.role === 'member') { visibleProjects = window.projects.filter(p => window.currentUser.allowedOwners.includes(p.owner)); }
-
-            document.getElementById('totalProjects').textContent = visibleProjects.length;
-            const owners = [...new Set(visibleProjects.map(p => p.owner))];
-            document.getElementById('totalUsers').textContent = owners.length;
+            let vP = window.currentUser.role === 'member' ? window.projects.filter(p => window.currentUser.allowedOwners.includes(p.owner)) : window.projects;
+            document.getElementById('totalProjects').textContent = vP.length;
+            document.getElementById('totalUsers').textContent = [...new Set(vP.map(p => p.owner))].length;
             document.getElementById('totalServers').textContent = window.servers.length;
 
             const grid = document.getElementById('projectGrid'); grid.innerHTML = '';
-            const grouped = visibleProjects.reduce((a, p) => { (a[p.owner] = a[p.owner] || []).push(p); return a; }, {});
+            const grouped = vP.reduce((a, p) => { (a[p.owner] = a[p.owner] || []).push(p); return a; }, {});
             Object.keys(grouped).forEach(o => {
-                const card = document.createElement('div'); card.className = 'user-card';
-                card.innerHTML = `<div class="user-card-header"><h3>${o}</h3>${window.currentUser.role === 'admin' ? `<button onclick="window.deleteUser('${o}')">Del</button>` : ''}</div>
+                const c = document.createElement('div'); c.className = 'user-card';
+                c.innerHTML = `<div class="user-card-header"><h3>${o}</h3>${window.currentUser.role === 'admin' ? `<button onclick="window.deleteUser('${o}')">Del</button>` : ''}</div>
                     <div class="project-list">${grouped[o].map(p => `<div class="project-item"><span>${p.name}</span>${window.currentUser.role === 'admin' ? `<button onclick="window.editProject('${p.id}')">Edit</button><button onclick="window.deleteProject('${p.id}')">Del</button>` : ''}</div>`).join('')}</div>`;
-                grid.appendChild(card);
+                grid.appendChild(c);
             });
 
-            // Parallel Team Tables
             const tg = document.getElementById('teamGrid');
-            tg.innerHTML = `
+            const renderTable = (tId, name) => `
                 <div class="team-column">
-                    <div class="team-header team-1" style="justify-content:space-between;"><span>${window.teamNames.team1}</span><button onclick="window.editTeamName('team1')">Edit</button></div>
-                    <div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>IP</th><th>Statut</th><th>Class</th><th>Entry</th><th>Notice</th><th>ASN</th><th>Nbr IP</th><th></th></tr></thead><tbody>
-                        ${window.servers.filter(s => s.team === '1').map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td><span class="status-badge status-${s.status.toLowerCase()}">${s.status}</span></td><td>${s.class}</td><td>${s.entry}</td><td>${s.notice}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button><button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}
+                    <div class="team-header team-${tId}" style="justify-content:space-between;"><span>${name}</span><button onclick="window.editTeamName('team${tId}')">Edit</button></div>
+                    <div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>IP</th><th>Statut</th><th>ASN</th><th>IPs</th><th></th></tr></thead><tbody>
+                        ${window.servers.filter(s => s.team == tId).map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td><span class="status-badge status-${s.status.toLowerCase()}">${s.status}</span></td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button><button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}
                     </tbody></table></div>
-                </div>
-                <div class="team-column" style="margin-top:2rem;">
-                    <div class="team-header team-2" style="justify-content:space-between;"><span>${window.teamNames.team2}</span><button onclick="window.editTeamName('team2')">Edit</button></div>
-                    <div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>IP</th><th>Statut</th><th>Class</th><th>Entry</th><th>Notice</th><th>ASN</th><th>Nbr IP</th><th></th></tr></thead><tbody>
-                        ${window.servers.filter(s => s.team === '2').map(s => `<tr><td>${s.name}</td><td>${s.ip}</td><td><span class="status-badge status-${s.status.toLowerCase()}">${s.status}</span></td><td>${s.class}</td><td>${s.entry}</td><td>${s.notice}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td><button onclick="window.editServer('${s.id}')">Edit</button><button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`).join('')}
-                    </tbody></table></div>
-                </div>
-            `;
+                </div>`;
+            tg.innerHTML = renderTable(1, window.teamNames.team1) + renderTable(2, window.teamNames.team2);
             if(window.lucide) lucide.createIcons();
         };
 
+        // SHARED HELPERS
         window.switchView = function(view, el) { if(!window.currentUser) return; if(window.currentUser.role !== 'admin' && (view === 'settings' || view === 'team')) return; document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); if(el) el.classList.add('active'); document.querySelectorAll('.view').forEach(v => v.style.display = 'none'); document.getElementById(view + 'View').style.display = 'block'; };
+        window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
+        window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
+        window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
+        window.closeServerModal = function() { document.getElementById('serverModalOverlay').style.display = 'none'; };
+        window.handleProjectSubmit = function(e) { e.preventDefault(); const id = document.getElementById('projectId').value || Date.now().toString(); const data = { id, owner: document.getElementById('ownerName').value, name: document.getElementById('projectName').value, link: document.getElementById('projectLink').value, username: document.getElementById('username').value, password: document.getElementById('password').value }; const idx = window.projects.findIndex(p => p.id === id); if(idx > -1) window.projects[idx] = data; else window.projects.push(data); window.saveData(); window.closeProjectModal(); };
+        window.deleteProject = function(id) { if(confirm('Delete?')) { window.projects = window.projects.filter(p => p.id !== id); window.saveData(); } };
+        window.deleteUser = function(owner) { if(confirm('Delete?')) { window.projects = window.projects.filter(p => p.owner !== owner); window.saveData(); } };
+        window.deleteServer = function(id) { if(confirm('Delete Server?')) { window.servers = window.servers.filter(s => s.id !== id); window.saveData(); } };
+        window.editProject = function(id) { const p = window.projects.find(x => x.id === id); if(p) { document.getElementById('projectId').value = p.id; document.getElementById('ownerName').value = p.owner; document.getElementById('projectName').value = p.name; document.getElementById('projectLink').value = p.link; document.getElementById('username').value = p.username; document.getElementById('password').value = p.password; document.getElementById('modalOverlay').style.display = 'flex'; } };
+        window.editServer = function(id) { const s = window.servers.find(x => x.id === id); if(s) { document.getElementById('serverId').value = s.id; document.getElementById('sName').value = s.name; document.getElementById('sIp').value = s.ip; document.getElementById('sStatus').value = s.status; document.getElementById('sClass').value = s.class; document.getElementById('sEntry').value = s.entry; document.getElementById('sNotice').value = s.notice; document.getElementById('sAsn').value = s.asn; document.getElementById('sNbrIp').value = s.nbrIp; document.getElementById('sTeam').value = s.team; document.getElementById('serverModalOverlay').style.display = 'flex'; } };
         window.editTeamName = function(key) { const n = prompt('New Name:', window.teamNames[key]); if(n) { window.teamNames[key] = n; window.saveData(); } };
         window.saveSettings = function(e) { e.preventDefault(); window.settings.adminName = document.getElementById('setAdminName').value; const newPass = document.getElementById('setAdminPass').value; if(newPass) window.settings.adminPass = newPass; window.saveData(); alert('Updated!'); };
-        window.openUserModal = function() { const checklist = document.getElementById('ownersChecklist'); const uniqueOwners = [...new Set(window.projects.map(p => p.owner))]; checklist.innerHTML = uniqueOwners.map(o => `<label><input type="checkbox" name="allowedOwner" value="${o}"> ${o}</label>`).join('') || '<p>Add owners first.</p>'; document.getElementById('userModalOverlay').style.display = 'flex'; };
-        window.handleUserSubmit = function(e) { e.preventDefault(); const checkboxes = document.querySelectorAll('input[name="allowedOwner"]:checked'); const allowed = Array.from(checkboxes).map(cb => cb.value); const newUser = { username: document.getElementById('newUsername').value, password: document.getElementById('newUserPass').value, name: document.getElementById('newUsername').value, allowedOwners: allowed }; window.settings.users.push(newUser); window.saveData(); document.getElementById('userModalOverlay').style.display = 'none'; };
+        window.openUserModal = function() { const checklist = document.getElementById('ownersChecklist'); const uO = [...new Set(window.projects.map(p => p.owner))]; checklist.innerHTML = uO.map(o => `<label><input type="checkbox" name="allowedOwner" value="${o}"> ${o}</label>`).join('') || '<p>Add owners first.</p>'; document.getElementById('userModalOverlay').style.display = 'flex'; };
+        window.handleUserSubmit = function(e) { e.preventDefault(); const cbs = document.querySelectorAll('input[name="allowedOwner"]:checked'); const allowed = Array.from(cbs).map(cb => cb.value); const newUser = { username: document.getElementById('newUsername').value, password: document.getElementById('newUserPass').value, name: document.getElementById('newUsername').value, allowedOwners: allowed }; window.settings.users.push(newUser); window.saveData(); document.getElementById('userModalOverlay').style.display = 'none'; };
         window.onload = window.refreshUI;
     </script>
 </body>
