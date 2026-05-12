@@ -58,7 +58,10 @@
         <div id="projectsView" class="view" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <h1 style="font-family: 'Outfit';">Project Management</h1>
-                <button class="btn-primary" onclick="window.openProjectModal()"><i data-lucide="plus" size="14"></i> Add Project</button>
+                <div style="display:flex; gap:1rem;">
+                    <button class="btn-secondary" onclick="window.openProjectImportModal()"><i data-lucide="upload" size="14"></i> Import</button>
+                    <button class="btn-primary" onclick="window.openProjectModal()"><i data-lucide="plus" size="14"></i> Add Project</button>
+                </div>
             </div>
             <div id="projectGrid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;"></div>
         </div>
@@ -98,6 +101,7 @@
     <div class="modal-overlay" id="modalOverlay"><div class="modal"><h2>Project</h2><form id="projectForm" onsubmit="window.handleProjectSubmit(event)"><input type="hidden" id="projectId"><div class="form-group"><label>Owner</label><input type="text" id="ownerName" required></div><div class="form-group"><label>Project</label><input type="text" id="projectName" required></div><div class="form-group"><label>Link</label><input type="url" id="projectLink" required></div><div class="form-group"><label>User</label><input type="text" id="username" required></div><div class="form-group"><label>Pass</label><input type="password" id="password" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeProjectModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
     <div class="modal-overlay" id="userModalOverlay"><div class="modal"><h2>User</h2><form onsubmit="window.handleUserSubmit(event)"><div class="form-group"><label>User</label><input type="text" id="newUsername" required></div><div class="form-group"><label>Pass</label><input type="password" id="newUserPass" required></div><div class="form-group"><label>Access (Owners)</label><div id="ownersChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeUserModal()">Cancel</button><button type="submit" class="btn-primary">Create</button></div></form></div></div>
     <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId"><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div><div class="form-group"><label>Main IP</label><input type="text" id="sIp" required></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Statut</label><input type="text" id="sStatus" value="Active"></div><div class="form-group"><label>Class</label><input type="text" id="sClass"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Owner</label><input type="text" id="sOwner" placeholder="Owner name..."></div><div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Date Entre</label><input type="text" id="sDate"></div><div class="form-group"><label>Notice Date</label><input type="text" id="sNoticeDate"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div><div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" value="0"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div></form></div></div>
+    <div class="modal-overlay" id="projectImportModalOverlay"><div class="modal"><h2>Import Projects</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Format: Owner;Project;Link;User;Pass</p><div class="import-box" onclick="document.getElementById('projFileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="projFileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="projImportText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeProjectImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleProjectImport()">Start Import</button></div></div></div>
     <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2><div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Assign to Owner (Optional)</label><input type="text" id="importOwner" placeholder="Owner name..."></div><div class="import-box" onclick="document.getElementById('fileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="fileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div></div></div>
 
     <script>
@@ -121,6 +125,27 @@
 
         window.openImportModal = function() { document.getElementById('importText').value = ''; document.getElementById('importModalOverlay').style.display = 'flex'; };
         window.closeImportModal = function() { document.getElementById('importModalOverlay').style.display = 'none'; };
+        window.openProjectImportModal = function() { document.getElementById('projImportText').value = ''; document.getElementById('projectImportModalOverlay').style.display = 'flex'; };
+        window.closeProjectImportModal = function() { document.getElementById('projectImportModalOverlay').style.display = 'none'; };
+        window.handleProjectImport = function() {
+            const f = document.getElementById('projFileInput').files[0];
+            const txt = document.getElementById('projImportText').value.trim();
+            if (f) { const r = new FileReader(); r.onload = (e) => window.processProjects(e.target.result.replace(/^\uFEFF/, '')); r.readAsText(f); } else if (txt) { window.processProjects(txt); }
+        };
+        window.processProjects = function(raw) {
+            try {
+                const lines = raw.split(/\r?\n/); let count = 0;
+                lines.forEach((line, idx) => {
+                    const clean = line.trim(); if(!clean || (idx === 0 && clean.toLowerCase().includes('owner'))) return;
+                    const p = clean.split(/[;\t]/);
+                    if(p.length >= 5) {
+                        window.projects.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 4), owner: (p[0]||'').trim(), name: (p[1]||'').trim(), link: (p[2]||'').trim(), username: (p[3]||'').trim(), password: (p[4]||'').trim() });
+                        count++;
+                    }
+                });
+                window.saveData(); window.closeProjectImportModal(); alert('Success: ' + count + ' projects added!');
+            } catch (err) { alert('Error: ' + err.message); }
+        };
         window.openProjectModal = function() { document.getElementById('projectForm').reset(); document.getElementById('projectId').value = ''; document.getElementById('modalOverlay').style.display = 'flex'; };
         window.closeProjectModal = function() { document.getElementById('modalOverlay').style.display = 'none'; };
         window.openServerModal = function() { document.getElementById('serverForm').reset(); document.getElementById('serverId').value = ''; document.getElementById('serverModalOverlay').style.display = 'flex'; };
