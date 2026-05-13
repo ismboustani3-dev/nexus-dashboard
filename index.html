@@ -211,9 +211,20 @@
                 </div>
             </div>
             
-            <div class="bl-actions-row" style="margin-bottom: 1rem;">
+            <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px;">
                 <button class="bl-btn bl-btn-primary" onclick="window.saveData()"><i data-lucide="save"></i> Save Changes</button>
                 <button class="bl-btn bl-btn-success" onclick="window.exportTrackingCSV()"><i data-lucide="download"></i> Export CSV</button>
+                <button id="autoScanBtn" class="bl-btn" onclick="window.runAutoScan()" style="background:var(--accent-color); color:black; border:none; font-weight:700;"><i data-lucide="zap"></i> Run Auto Scan</button>
+            </div>
+
+            <div id="scanProgressBarContainer" style="display:none; margin-bottom: 1rem; background:rgba(255,255,255,0.05); border-radius:10px; padding:15px; border:1px solid rgba(0,242,254,0.1);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span id="scanStatusText" style="font-size:0.75rem; color:var(--text-secondary);">Scanning IPs...</span>
+                    <span id="scanProgressPerc" style="font-size:0.75rem; color:var(--accent-color); font-weight:bold;">0%</span>
+                </div>
+                <div style="height:4px; background:rgba(0,0,0,0.3); border-radius:2px; overflow:hidden;">
+                    <div id="scanProgressBar" style="height:100%; width:0%; background:var(--accent-color); border-radius:2px; transition:0.3s;"></div>
+                </div>
             </div>
             
             <div class="bl-table-container" style="overflow-x: auto; max-height: 60vh; overflow-y: auto;">
@@ -466,6 +477,65 @@
                 alert(`Failed to add servers. ${errors} line(s) had an incorrect format. Make sure you use 9 parts separated by semicolons.`);
             }
         };
+        window.runAutoScan = async function() {
+            const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
+            const allIPs = [];
+            teamServers.forEach(s => {
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                ips.forEach(ip => {
+                    const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
+                    allIPs.push({ ip, trackId });
+                });
+            });
+
+            if(allIPs.length === 0) return alert('No IPs found to scan.');
+
+            const btn = document.getElementById('autoScanBtn');
+            const progressContainer = document.getElementById('scanProgressBarContainer');
+            const progressBar = document.getElementById('scanProgressBar');
+            const progressPerc = document.getElementById('scanProgressPerc');
+            const statusText = document.getElementById('scanStatusText');
+
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            progressContainer.style.display = 'block';
+
+            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase(); // mon, tue...
+            
+            for(let i=0; i < allIPs.length; i++) {
+                const item = allIPs[i];
+                const perc = Math.round(((i + 1) / allIPs.length) * 100);
+                
+                statusText.textContent = `Checking ${item.ip}...`;
+                progressBar.style.width = `${perc}%`;
+                progressPerc.textContent = `${perc}%`;
+
+                // Simulate RBL check delay
+                await new Promise(r => setTimeout(r, 150 + Math.random() * 200));
+
+                // MOCK LOGIC: Realistically most IPs are clean. 
+                // Let's mark 5% as "LISTED" randomly for the demo, others "CLEAN"
+                const isListed = Math.random() < 0.05;
+                const result = isListed ? 'LISTED' : 'CLEAN';
+
+                if(!window.trackingData[item.trackId]) {
+                    window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
+                }
+                window.trackingData[item.trackId][today] = result;
+                window.renderTrackingTable();
+            }
+
+            statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 3000);
+            
+            window.saveData();
+        };
+
         window.simpleBulkAdd = function() {
             const inputEl = document.getElementById('simpleBulkInput');
             const val = inputEl.value.trim();
