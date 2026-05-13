@@ -212,13 +212,19 @@
             </div>
 
             <div id="trackingStats" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
-                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:1.2rem; display:flex; align-items:center; gap:15px;">
-                    <div style="width:40px; height:40px; background:#10b981; border-radius:10px; display:flex; align-items:center; justify-content:center; color:black;"><i data-lucide="check-circle" size="20"></i></div>
-                    <div><div style="font-size:0.7rem; color:rgba(16,185,129,0.8); font-weight:700; text-transform:uppercase;">Clean Today</div><div id="totalCleanIps" style="font-size:1.5rem; font-weight:800; color:#10b981; line-height:1;">0</div></div>
+                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:1.2rem; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <div style="width:40px; height:40px; background:#10b981; border-radius:10px; display:flex; align-items:center; justify-content:center; color:black;"><i data-lucide="check-circle" size="20"></i></div>
+                        <div><div style="font-size:0.7rem; color:rgba(16,185,129,0.8); font-weight:700; text-transform:uppercase;">Clean Today</div><div id="totalCleanIps" style="font-size:1.5rem; font-weight:800; color:#10b981; line-height:1;">0</div></div>
+                    </div>
+                    <button onclick="window.copyIpsByStatus('CLEAN')" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="copy" size="12"></i> Copy List</button>
                 </div>
-                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:1.2rem; display:flex; align-items:center; gap:15px;">
-                    <div style="width:40px; height:40px; background:#ef4444; border-radius:10px; display:flex; align-items:center; justify-content:center; color:black;"><i data-lucide="alert-triangle" size="20"></i></div>
-                    <div><div style="font-size:0.7rem; color:rgba(239,68,68,0.8); font-weight:700; text-transform:uppercase;">Listed Today</div><div id="totalListedIps" style="font-size:1.5rem; font-weight:800; color:#ef4444; line-height:1;">0</div></div>
+                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:1.2rem; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <div style="width:40px; height:40px; background:#ef4444; border-radius:10px; display:flex; align-items:center; justify-content:center; color:black;"><i data-lucide="alert-triangle" size="20"></i></div>
+                        <div><div style="font-size:0.7rem; color:rgba(239,68,68,0.8); font-weight:700; text-transform:uppercase;">Listed Today</div><div id="totalListedIps" style="font-size:1.5rem; font-weight:800; color:#ef4444; line-height:1;">0</div></div>
+                    </div>
+                    <button onclick="window.copyIpsByStatus('LISTED')" style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:6px 12px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="copy" size="12"></i> Copy List</button>
                 </div>
             </div>
             
@@ -545,6 +551,30 @@
             }, 3000);
             
             window.saveData();
+        };
+
+        window.copyIpsByStatus = function(status) {
+            const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
+            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase();
+            const result = [];
+            
+            teamServers.forEach(s => {
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                ips.forEach(ip => {
+                    const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
+                    const trk = window.trackingData[trackId] || {};
+                    if((trk[today] || '').toUpperCase().trim() === status.toUpperCase()) {
+                        result.push(ip);
+                    }
+                });
+            });
+            
+            if(result.length > 0) {
+                navigator.clipboard.writeText(result.join('\n'));
+                alert(`Copied ${result.length} ${status} IPs to clipboard!`);
+            } else {
+                alert(`No ${status} IPs found for today.`);
+            }
         };
 
         window.simpleBulkAdd = function() {
