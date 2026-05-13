@@ -146,9 +146,17 @@
                     <i data-lucide="users" size="18"></i>
                     <span style="font-size:0.9rem; color:var(--text-secondary);">Display Team:</span>
                     <select id="teamViewFilter" onchange="window.refreshUI()">
-                        <option value="all">All Teams</option>
                         <option value="1">Team 1</option>
                         <option value="2">Team 2</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
+                    <i data-lucide="arrow-up-down" size="18"></i>
+                    <span style="font-size:0.9rem; color:var(--text-secondary);">Sort by IP:</span>
+                    <select id="teamSortFilter" onchange="window.refreshUI()">
+                        <option value="none">Default</option>
+                        <option value="ip_desc">Max IP (High to Low)</option>
+                        <option value="ip_asc">Min IP (Low to High)</option>
                     </select>
                 </div>
             </div>
@@ -580,9 +588,17 @@
             if(ownerFilter !== 'all') filteredServers = window.servers.filter(s => s.owner === ownerFilter);
 
             const teamFilter = document.getElementById('teamViewFilter').value;
+            const sortFilter = document.getElementById('teamSortFilter').value;
             const tg = document.getElementById('teamGrid');
             const render = (tId, tName) => {
-                const srvs = filteredServers.filter(s => s.team == tId);
+                let srvs = filteredServers.filter(s => s.team == tId);
+                
+                if (sortFilter === 'ip_desc') {
+                    srvs.sort((a, b) => parseInt(b.nbrIp || 0) - parseInt(a.nbrIp || 0));
+                } else if (sortFilter === 'ip_asc') {
+                    srvs.sort((a, b) => parseInt(a.nbrIp || 0) - parseInt(b.nbrIp || 0));
+                }
+
                 const totalIps = srvs.reduce((acc, s) => acc + parseInt(s.nbrIp || 0), 0);
                 const asnCounts = srvs.reduce((a,s) => { if(s.asn) a[s.asn] = (a[s.asn]||0)+1; return a; }, {});
                 const asnList = Object.entries(asnCounts).map(([asn, count]) => {
