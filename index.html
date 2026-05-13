@@ -1809,50 +1809,55 @@
             a.click();
         };
 
-        const ipCache = {};
+        window.ipCache = {};
 
-        async function fetchIpAPI(url) {
+        window.fetchIpAPI = async function(url) {
+            console.log(`[IP Checker] Fetching: ${url}`);
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 5000);
+                const timeout = setTimeout(() => controller.abort(), 6000);
                 const response = await fetch(url, { signal: controller.signal });
                 clearTimeout(timeout);
+                if(!response.ok) throw new Error(`HTTP ${response.status}`);
                 return await response.json();
-            } catch (err) { return null; }
+            } catch (err) { 
+                console.warn(`[IP Checker] Error on ${url}:`, err.message);
+                return null; 
+            }
         }
 
-        async function getIPData(ip) {
-            if (ipCache[ip]) return ipCache[ip];
+        window.getIPData = async function(ip) {
+            if (window.ipCache[ip]) return window.ipCache[ip];
 
             // API 1: ipwho.is
-            let data = await fetchIpAPI(`https://ipwho.is/${ip}`);
+            let data = await window.fetchIpAPI(`https://ipwho.is/${ip}`);
             if (data && data.success !== false) {
                 const res = { ip, status: "Success", provider: data.connection?.isp || "Unknown", country: data.country || "", region: data.region || "", city: data.city || "" };
-                ipCache[ip] = res; return res;
+                window.ipCache[ip] = res; return res;
             }
 
             // API 2: ipapi.co
-            data = await fetchIpAPI(`https://ipapi.co/${ip}/json/`);
+            data = await window.fetchIpAPI(`https://ipapi.co/${ip}/json/`);
             if (data && !data.error) {
                 const res = { ip, status: "Success", provider: data.org || "Unknown", country: data.country_name || "", region: data.region || "", city: data.city || "" };
-                ipCache[ip] = res; return res;
+                window.ipCache[ip] = res; return res;
             }
 
             // API 3: ipinfo.io
-            data = await fetchIpAPI(`https://ipinfo.io/${ip}/json`);
+            data = await window.fetchIpAPI(`https://ipinfo.io/${ip}/json`);
             if (data && !data.error) {
                 const res = { ip, status: "Success", provider: data.org || "Unknown", country: data.country || "", region: data.region || "", city: data.city || "" };
-                ipCache[ip] = res; return res;
+                window.ipCache[ip] = res; return res;
             }
 
-            // API 4: freeipapi.com (Very reliable CORS)
-            data = await fetchIpAPI(`https://freeipapi.com/api/json/${ip}`);
+            // API 4: freeipapi.com
+            data = await window.fetchIpAPI(`https://freeipapi.com/api/json/${ip}`);
             if (data && data.ipAddress) {
                 const res = { ip, status: "Success", provider: data.asName || "Unknown", country: data.countryName || "", region: data.regionName || "", city: data.cityName || "" };
-                ipCache[ip] = res; return res;
+                window.ipCache[ip] = res; return res;
             }
 
-            return { ip, status: "Failed", provider: "Fetch Error", country: "", region: "", city: "" };
+            return { ip, status: "Failed", provider: "Fetch Error (All APIs failed)", country: "", region: "", city: "" };
         }
 
         window.runIpLookup = async function() {
@@ -1885,10 +1890,10 @@
             });
 
             // Process in batches
-            const batchSize = 30;
+            const batchSize = 10; // Smaller batches for better observability
             for(let i=0; i < ips.length; i += batchSize) {
                 const batch = ips.slice(i, i + batchSize);
-                const results = await Promise.all(batch.map(ip => getIPData(ip)));
+                const results = await Promise.all(batch.map(ip => window.getIPData(ip)));
 
                 results.forEach(data => {
                     const row = document.getElementById(`ip-row-${data.ip.replaceAll('.', '-')}`);
