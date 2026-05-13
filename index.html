@@ -71,6 +71,17 @@
         .bl-status.listed { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
         .bl-status.error { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
 
+        /* Submenu Styles */
+        .nav-item { position: relative; }
+        .submenu { list-style: none; padding-left: 3rem; margin-top: 0.5rem; display: none; flex-direction: column; gap: 0.5rem; }
+        .submenu li { font-size: 0.75rem; color: var(--text-secondary); cursor: pointer; padding: 6px 0; transition: 0.2s; }
+        .submenu li:hover { color: var(--accent-color); }
+        .submenu-arrow { margin-left: auto; transition: transform 0.3s; width: 14px !important; height: 14px !important; }
+        .nav-link.active + .submenu { display: flex; }
+        .rotate-180 { transform: rotate(180deg); }
+        
+        /* DNS Bulk Scanner Styles */
+
         /* IP Popover */
         .ip-cell-container { position: relative; }
         .ip-badge { font-size: 0.65rem; color: var(--text-secondary); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; margin-left: 4px; cursor: pointer; transition: 0.2s; }
@@ -129,7 +140,21 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>WMN3</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('dns', this)"><i data-lucide="search-code"></i><span>DNS Records</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('extraction', this)"><i data-lucide="scissors"></i><span>Extraction</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
+    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>WMN3</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li>
+    
+    <li class="nav-item">
+        <a href="#" class="nav-link" onclick="window.toggleTools(this)">
+            <i data-lucide="wrench"></i><span>Tools</span>
+            <i data-lucide="chevron-down" class="submenu-arrow"></i>
+        </a>
+        <ul class="submenu" id="toolsSubmenu">
+            <li onclick="window.switchView('dns')">• DNS Scanner</li>
+            <li onclick="window.switchView('extraction')">• Extraction</li>
+            <li onclick="window.switchView('deploy')">• Deploy</li>
+        </ul>
+    </li>
+
+    <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
 
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
@@ -451,6 +476,29 @@
                         <button class="dns-action-btn" onclick="document.getElementById('extractInput').value=''; document.getElementById('extractOutput').value='';"><i data-lucide="trash-2" size="14"></i> Clear</button>
                         <button class="dns-action-btn" onclick="window.downloadExtractResults()"><i data-lucide="download" size="14"></i> Download .txt</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="deployView" class="view" style="display:none; padding: 0 2rem;">
+            <div class="bl-header" style="margin-bottom: 2rem;">
+                <h2>Deployment Manager</h2>
+                <p>Ship your code to production servers with one click.</p>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
+                <div class="dns-card">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem;">
+                        <div style="width:40px; height:40px; background:rgba(99,102,241,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#6366f1;"><i data-lucide="send"></i></div>
+                        <div><h3 style="font-size:1rem;">Fast Deploy</h3><p style="font-size:0.7rem; color:var(--text-secondary);">Direct SSH deployment</p></div>
+                    </div>
+                    <button class="btn-dns-start" style="margin-top:0;">Configure Pipeline</button>
+                </div>
+                <div class="dns-card">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem;">
+                        <div style="width:40px; height:40px; background:rgba(168,85,247,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#a855f7;"><i data-lucide="globe"></i></div>
+                        <div><h3 style="font-size:1rem;">Global Test</h3><p style="font-size:0.7rem; color:var(--text-secondary);">Latency check across regions</p></div>
+                    </div>
+                    <button class="btn-dns-start" style="margin-top:0; background:linear-gradient(135deg, #a855f7, #9333ea);">Start Global Test</button>
                 </div>
             </div>
         </div>
@@ -1424,6 +1472,19 @@
             document.querySelectorAll('.view').forEach(x => x.style.display = 'none'); 
             document.getElementById(v + 'View').style.display = 'block'; 
             if(v === 'tracking') window.renderTrackingTable();
+            if(v === 'team') window.renderTeamStats();
+        };
+
+        window.toggleTools = function(el) {
+            const sub = document.getElementById('toolsSubmenu');
+            const arrow = el.querySelector('.submenu-arrow');
+            const isOpen = sub.style.display === 'flex';
+            
+            sub.style.display = isOpen ? 'none' : 'flex';
+            if(isOpen) arrow.classList.remove('rotate-180');
+            else arrow.classList.add('rotate-180');
+            
+            el.classList.toggle('active');
         };
 
         window.renderHistory = function() {
