@@ -596,11 +596,14 @@
             if(teamFilter === 'all' || teamFilter === '1') tg.innerHTML += render(1, window.teamNames.team1);
             if(teamFilter === 'all' || teamFilter === '2') tg.innerHTML += render(2, window.teamNames.team2);
             
-            let vP = window.projects;
+            let vP = window.projects || [];
             const projOwnerFilterEl = document.getElementById('projOwnerFilter');
-            const projFilterVal = projOwnerFilterEl.value;
-            const allProjOwners = [...new Set(vP.map(p => p.owner))];
-            projOwnerFilterEl.innerHTML = '<option value="all">All Owners</option>' + allProjOwners.map(o => `<option value="${o}" ${o === projFilterVal ? 'selected' : ''}>${o}</option>`).join('');
+            const projFilterVal = projOwnerFilterEl ? projOwnerFilterEl.value : 'all';
+            const allProjOwners = [...new Set(vP.map(p => p.owner).filter(o => o))];
+            
+            if(projOwnerFilterEl) {
+                projOwnerFilterEl.innerHTML = '<option value="all">All Owners</option>' + allProjOwners.map(o => `<option value="${o}" ${o === projFilterVal ? 'selected' : ''}>${o}</option>`).join('');
+            }
             
             if(projFilterVal !== 'all') vP = vP.filter(p => p.owner === projFilterVal);
             
@@ -626,7 +629,7 @@
                         <h3>${o}</h3>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <span class="proj-count-badge">${grouped[o].length} project${grouped[o].length > 1 ? 's' : ''}</span>
-                            <button class="proj-actions" style="display:inline;"><button onclick="window.deleteUser('${o}')" class="proj-actions" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:0.65rem; cursor:pointer;">Delete All</button></div>
+                            <div class="proj-actions" style="display:inline-flex;"><button onclick="window.deleteUser('${o}')" class="danger" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:0.65rem; cursor:pointer;">Delete All</button></div>
                         </div>
                     </div>
                     <table class="proj-table">
