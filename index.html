@@ -581,6 +581,10 @@
                             ${ips[0]} 
                             <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${ips.length-1} more</span>
                             <div class="ip-popover">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                                    <span style="font-size:0.6rem; color:var(--text-secondary);">Server IPs</span>
+                                    <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                                </div>
                                 ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
                             </div>
                         </div>
