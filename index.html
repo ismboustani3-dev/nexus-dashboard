@@ -279,10 +279,10 @@
                     </div>
 
                     <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
-                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;"><strong>Bulk Group Import (Vertical)</strong> — Format: <strong>ServerName</strong> followed by <strong>IPs</strong> on new lines.</p>
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;"><strong>Bulk Group Import</strong> — Format: <strong>team;server;ip;domain</strong> (Multiple IPs for same server will be merged)</p>
                         <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                            <textarea id="simpleBulkInput" placeholder="srv_001&#10;1.1.1.1&#10;1.1.1.2&#10;srv_002&#10;2.2.2.1" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:100px; resize:vertical;"></textarea>
-                            <button class="btn-primary" onclick="window.simpleBulkAdd()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Import Group</button>
+                            <textarea id="simpleBulkInput" placeholder="1;srv_001;1.1.1.1;domain1.com&#10;1;srv_001;1.1.1.2;domain2.com" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:100px; resize:vertical;"></textarea>
+                            <button class="btn-primary" onclick="window.simpleBulkAdd()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Import Data</button>
                         </div>
                     </div>
                 </div>
@@ -1078,47 +1078,78 @@
             const val = inputEl.value.trim();
             if(!val) return;
             const lines = val.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-            let addedCount = 0; let updatedCount = 0;
+            
+            let addedCount = 0;
+            let updatedCount = 0;
             const activeOwnerFilter = document.getElementById('globalOwnerFilter').value;
             const inheritedOwner = activeOwnerFilter !== 'all' ? activeOwnerFilter : '';
-            const activeTeamFilter = document.getElementById('teamViewFilter').value;
-            const inheritedTeam = (activeTeamFilter !== 'all' && activeTeamFilter !== '') ? activeTeamFilter : '1';
 
-            let currentServer = null; let currentIps = [];
-            const flushServer = () => {
-                if (!currentServer) return;
-                const existingSrv = window.servers.find(s => s.name === currentServer);
-                if (existingSrv) {
-                    const existingIps = (existingSrv.ip || '').split(/[\s\n,]+/).map(ip => ip.trim()).filter(ip => ip);
-                    const newIps = currentIps.filter(ip => !existingIps.includes(ip));
-                    if (newIps.length > 0) {
-                        existingSrv.ip = [...existingIps, ...newIps].join('\n');
-                        existingSrv.nbrIp = (existingIps.length + newIps.length).toString();
-                        updatedCount++;
-                    }
+            // Group by team and name
+            const grouped = {};
+
+            lines.forEach(line => {
+                const parts = line.split(';');
+                if (parts.length < 3) return;
+
+                const team = (parts[0] || '1').trim();
+                const name = (parts[1] || '').trim();
+                const ip = (parts[2] || '').trim();
+                const domain = (parts[3] || '').trim();
+
+                if (!name) return;
+                const key = `${team}_${name}`;
+
+                if (!grouped[key]) {
+                    grouped[key] = { team, name, ips: new Set(), domains: new Set() };
+                }
+                if (ip) grouped[key].ips.add(ip);
+                if (domain) grouped[key].domains.add(domain);
+            });
+
+            Object.values(grouped).forEach(data => {
+                const existing = window.servers.find(s => s.name === data.name && s.team.toString() === data.team.toString());
+                
+                const ipsStr = Array.from(data.ips).join('\n');
+                const domainsStr = Array.from(data.domains).join('\n');
+
+                if (existing) {
+                    // Update existing: merge IPs and Domains
+                    const oldIps = (existing.ip || '').split(/[,\n]+/).map(x => x.trim()).filter(x => x);
+                    const oldDomains = (existing.domain || '').split(/[,\n]+/).map(x => x.trim()).filter(x => x);
+                    
+                    const mergedIps = new Set([...oldIps, ...data.ips]);
+                    const mergedDomains = new Set([...oldDomains, ...data.domains]);
+
+                    existing.ip = Array.from(mergedIps).join('\n');
+                    existing.domain = Array.from(mergedDomains).join('\n');
+                    existing.nbrIp = mergedIps.size.toString();
+                    updatedCount++;
                 } else {
+                    // Create new
                     window.servers.push({
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                        team: inheritedTeam, name: currentServer, ip: currentIps.join('\n'),
-                        status: 'Active', class: '', date: new Date().toLocaleDateString(),
-                        entre: '', notice: '', noticeDate: '', asn: '', nbrIp: currentIps.length.toString(), owner: inheritedOwner
+                        team: data.team,
+                        name: data.name,
+                        ip: ipsStr,
+                        domain: domainsStr,
+                        status: 'Active',
+                        class: '',
+                        date: new Date().toLocaleDateString(),
+                        noticeDate: '',
+                        asn: '',
+                        nbrIp: data.ips.size.toString(),
+                        owner: inheritedOwner
                     });
                     addedCount++;
                 }
-                currentServer = null; currentIps = [];
-            };
-            const isIP = (str) => /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(str);
-            lines.forEach(line => {
-                if (isIP(line)) { if (currentServer) currentIps.push(line); }
-                else { flushServer(); currentServer = line; }
             });
-            flushServer();
-            
+
             if (addedCount > 0 || updatedCount > 0) {
-                window.saveData(); inputEl.value = '';
-                alert(`Successfully added ${addedCount} and updated ${updatedCount} server(s).`);
+                window.saveData();
+                inputEl.value = '';
+                alert(`Bulk Import Complete: ${addedCount} new server(s) added, ${updatedCount} server(s) updated.`);
                 window.refreshUI();
-            } else { alert('No servers processed. Format: ServerName followed by IPs on new lines.'); }
+            } else { alert('No servers processed. Format: team;server;ip;domain'); }
         };
         window.quickDeleteServer = function() {
             const inputEl = document.getElementById('quickDeleteInput');
