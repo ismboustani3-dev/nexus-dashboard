@@ -582,16 +582,16 @@
                 <!-- Distribution Section -->
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
                     <div class="dns-card" style="padding:1.5rem;">
-                        <h4 style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.2rem; display:flex; align-items:center; gap:8px;">
+                        <h4 style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.5rem; display:flex; align-items:center; gap:8px;">
                             <i data-lucide="server" size="14"></i> Providers Distribution
                         </h4>
-                        <div id="ipProviderBadges" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                        <div id="ipProviderBadges" style="display:flex; flex-direction:column; gap:1.2rem;"></div>
                     </div>
                     <div class="dns-card" style="padding:1.5rem;">
-                        <h4 style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.2rem; display:flex; align-items:center; gap:8px;">
+                        <h4 style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.5rem; display:flex; align-items:center; gap:8px;">
                             <i data-lucide="map-pin" size="14"></i> Regions Distribution
                         </h4>
-                        <div id="ipRegionBadges" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                        <div id="ipRegionBadges" style="display:flex; flex-direction:column; gap:1.2rem;"></div>
                     </div>
                 </div>
             </div>
@@ -1947,9 +1947,29 @@
                     progress.style.width = `${progressPerc}%`;
                     document.getElementById('ipProgressText').textContent = `${progressPerc}%`;
 
-                    // Update Badges
-                    provBadges.innerHTML = Object.entries(providers).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:6px 12px; border-radius:6px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937; display:flex; align-items:center; gap:6px;"><span style="color:#6366f1;">${v}</span> ${k}</span>`).join('');
-                    regBadges.innerHTML = Object.entries(regions).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:6px 12px; border-radius:6px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937; display:flex; align-items:center; gap:6px;"><span style="color:#a855f7;">${v}</span> ${k}</span>`).join('');
+                    // Update Lists (Classes Style)
+                    const createStatItem = (label, count, total, color) => {
+                        const perc = Math.round((count / total) * 100);
+                        return `
+                            <div style="margin-bottom:0.5rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:0.8rem;">
+                                    <span style="color:#e2e8f0;">${label}</span>
+                                    <span style="color:${color}; font-weight:700;">${count} IPs (${perc}%)</span>
+                                </div>
+                                <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
+                                    <div style="width:${perc}%; height:100%; background:${color}; border-radius:4px;"></div>
+                                </div>
+                            </div>
+                        `;
+                    };
+
+                    provBadges.innerHTML = Object.entries(providers)
+                        .sort((a,b) => b[1] - a[1])
+                        .map(([k,v]) => createStatItem(k, v, success, '#6366f1')).join('');
+                        
+                    regBadges.innerHTML = Object.entries(regions)
+                        .sort((a,b) => b[1] - a[1])
+                        .map(([k,v]) => createStatItem(k, v, success, '#a855f7')).join('');
                 });
             }
         };
