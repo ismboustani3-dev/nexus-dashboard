@@ -472,6 +472,7 @@
                         <tr>
                             <th>Domain</th>
                             <th>Owner</th>
+                            <th>Team</th>
                             <th>Status</th>
                             <th>Notes</th>
                             <th style="text-align:right;">Actions</th>
@@ -2123,23 +2124,32 @@
         };
 
         window.saveDomain = function() {
-            const domain = document.getElementById('dtDomain').value.trim();
-            const owner = document.getElementById('dtOwner').value.trim();
-            const notes = document.getElementById('dtNotes').value.trim();
+            const raw = document.getElementById('dtDomain').value.trim();
+            if (!raw) return alert('Input is required');
 
-            if (!domain) return alert('Domain is required');
+            const lines = raw.split(/\r?\n/);
+            let count = 0;
 
-            window.domainTracking.push({
-                id: Date.now().toString(),
-                domain,
-                owner,
-                notes,
-                status: 'Checking...',
-                lastCheck: new Date().toISOString()
+            lines.forEach(line => {
+                const parts = line.split(';');
+                const domain = (parts[0] || '').trim();
+                if (!domain) return;
+
+                window.domainTracking.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    domain,
+                    owner: (parts[1] || '').trim(),
+                    team: (parts[2] || '1').trim(),
+                    notes: (parts[3] || '').trim(),
+                    status: 'CLEAN',
+                    lastCheck: new Date().toISOString()
+                });
+                count++;
             });
 
             window.saveDomainData();
             window.closeDomainModal();
+            alert(`Added ${count} domains!`);
         };
 
         window.deleteDomain = function(id) {
@@ -2162,6 +2172,7 @@
                 <tr>
                     <td style="font-weight:700; color:white;">${d.domain}</td>
                     <td><span style="background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; font-size:0.7rem;">${d.owner || '-'}</span></td>
+                    <td><span style="color:#6366f1; font-weight:700;">Team ${d.team || '1'}</span></td>
                     <td><span style="color:#10b981; font-weight:700;">CLEAN</span></td>
                     <td style="color:var(--text-secondary); font-size:0.75rem;">${d.notes || '-'}</td>
                     <td style="text-align:right;">
@@ -2207,16 +2218,9 @@
             <h2 style="font-family:'Outfit'; margin-bottom:1.5rem;">Add Domain to Track</h2>
             <form id="domainTrackForm" onsubmit="event.preventDefault(); window.saveDomain();">
                 <div class="form-group" style="margin-bottom:1.2rem;">
-                    <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:8px; text-transform:uppercase;">Domain Name</label>
-                    <input type="text" id="dtDomain" placeholder="example.com" style="width:100%; background:#030712; border:1px solid #1f2937; padding:12px; border-radius:8px; color:white; outline:none;" required>
-                </div>
-                <div class="form-group" style="margin-bottom:1.2rem;">
-                    <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:8px; text-transform:uppercase;">Owner / Project</label>
-                    <input type="text" id="dtOwner" placeholder="Client Name" style="width:100%; background:#030712; border:1px solid #1f2937; padding:12px; border-radius:8px; color:white; outline:none;">
-                </div>
-                <div class="form-group" style="margin-bottom:2rem;">
-                    <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:8px; text-transform:uppercase;">Notes</label>
-                    <textarea id="dtNotes" placeholder="Additional info..." style="width:100%; background:#030712; border:1px solid #1f2937; padding:12px; border-radius:8px; color:white; outline:none; height:80px; resize:none;"></textarea>
+                    <label style="display:block; font-size:0.75rem; color:#94a3b8; margin-bottom:8px; text-transform:uppercase;">Domains (Bulk: one per line)</label>
+                    <textarea id="dtDomain" placeholder="domain1.com;Owner;1;Notes&#10;domain2.com;Owner;2" style="width:100%; background:#030712; border:1px solid #1f2937; padding:12px; border-radius:8px; color:white; outline:none; height:120px; font-family:monospace; font-size:0.8rem;"></textarea>
+                    <p style="font-size:0.6rem; color:#6b7280; margin-top:5px;">Format: domain;owner;team;notes</p>
                 </div>
                 <div style="display:flex; justify-content:flex-end; gap:12px;">
                     <button type="button" class="btn-secondary" onclick="window.closeDomainModal()">Cancel</button>
