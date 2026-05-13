@@ -841,6 +841,18 @@
                         </div>`;
                 }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Class data</div>';
 
+                const teamDeleted = (window.deletionHistory || []).filter(h => h.team == tId);
+                const deletedMonthStats = Object.entries(teamDeleted.reduce((acc, item) => {
+                    const d = new Date(item.deletedAt);
+                    const m = d.toLocaleString('default', { month: 'short' });
+                    acc[m] = (acc[m] || 0) + 1;
+                    return acc;
+                }, {})).map(([m, count]) => `
+                    <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:4px;">
+                        <span>${m}</span><span style="color:#ef4444; font-weight:bold;">${count}</span>
+                    </div>
+                `).join('') || '<div style="font-size:0.7rem; color:var(--text-secondary)">0 Deleted</div>';
+
                 const rows = srvs.map(s => {
                     const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     const ipDisplay = ips.length > 1 ? `
@@ -860,7 +872,6 @@
                 }).join('');
 
                 // Render Deleted Servers for this team
-                const teamDeleted = (window.deletionHistory || []).filter(h => h.team == tId);
                 let historyHtml = '';
                 if(teamDeleted.length > 0) {
                     const sorted = [...teamDeleted].sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
@@ -873,7 +884,7 @@
                     }, {});
 
                     historyHtml = `
-                        <div style="margin-top: 2rem; border-top: 1px dashed var(--border-color); padding-top: 1.5rem;">
+                        <div id="history-team-${tId}" style="margin-top: 2rem; border-top: 1px dashed var(--border-color); padding-top: 1.5rem;">
                             <h4 style="color:#ef4444; font-size:0.8rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:8px; letter-spacing:1px;">
                                 <i data-lucide="history" size="16"></i> DELETED SERVERS HISTORY
                             </h4>
@@ -914,6 +925,10 @@
                         <div class="team-analytics">
                             <div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div>
                             <div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div>
+                            <div class="analytics-card" onclick="document.getElementById('history-team-${tId}')?.scrollIntoView({behavior:'smooth'})" style="cursor:pointer; border:1px solid rgba(239,68,68,0.1); background:rgba(239,68,68,0.02);">
+                                <h4 style="color:#ef4444;">Deleted</h4>
+                                <div style="margin-top:10px;">${deletedMonthStats}</div>
+                            </div>
                             <div class="analytics-card"><h4>Providers</h4><div style="margin-top:10px;">${asnList}</div></div>
                             <div class="analytics-card"><h4>Classes</h4><div style="margin-top:10px;">${classList}</div></div>
                         </div>
