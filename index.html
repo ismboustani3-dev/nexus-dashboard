@@ -1505,9 +1505,13 @@
 
                         const rdnsInfo = (window.rdnsData || {})[s.id] || { status: 'PENDING', color: '#6b7280' };
                         const rdnsDisplay = `
-                            <div style="display:flex; flex-direction:column; gap:2px;">
-                                <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.7rem; border:1px solid ${rdnsInfo.color}44; padding:2px 6px; border-radius:4px; display:inline-block; text-align:center;">${rdnsInfo.status}</span>
-                                ${rdnsInfo.date ? `<span style="font-size:0.55rem; color:var(--text-secondary); text-align:center;">${rdnsInfo.date}</span>` : ''}
+                            <div style="display:flex; flex-direction:column; gap:2px; min-width:100px;">
+                                <div style="display:flex; align-items:center; gap:4px; justify-content:center;">
+                                    <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.65rem; border:1px solid ${rdnsInfo.color}44; padding:1px 4px; border-radius:3px;">${rdnsInfo.status}</span>
+                                    ${rdnsInfo.ptr ? `<i data-lucide="info" size="10" title="PTR: ${rdnsInfo.ptr}" style="color:var(--accent-color); cursor:help;"></i>` : ''}
+                                </div>
+                                ${rdnsInfo.ptr ? `<div style="font-size:0.55rem; color:#94a3b8; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;" title="${rdnsInfo.ptr}">${rdnsInfo.ptr}</div>` : ''}
+                                ${rdnsInfo.date ? `<div style="font-size:0.5rem; color:#4b5563; text-align:center;">${rdnsInfo.date}</div>` : ''}
                             </div>
                         `;
 
@@ -2277,20 +2281,44 @@
                 }
 
                 try {
-                    const res = await fetch(`https://dns.google/resolve?name=${domains[0]}&type=A`);
-                    const json = await res.json();
-                    const answers = json.Answer || [];
-                    const matches = answers.some(a => a.data === ips[0]);
+                    // 1. Forward Lookup (A Record)
+                    const fRes = await fetch(`https://dns.google/resolve?name=${domains[0]}&type=A`);
+                    const fJson = await fRes.json();
+                    const aRecords = (fJson.Answer || []).filter(a => a.type === 1);
+                    const aMatches = aRecords.some(a => a.data === ips[0]);
+
+                    // 2. Reverse Lookup (PTR Record)
+                    const revIp = ips[0].split('.').reverse().join('.') + '.in-addr.arpa';
+                    const rRes = await fetch(`https://dns.google/resolve?name=${revIp}&type=PTR`);
+                    const rJson = await rRes.json();
+                    const ptrRecords = (rJson.Answer || []).filter(a => a.type === 12);
+                    const ptrValue = ptrRecords.length > 0 ? ptrRecords[0].data.replace(/\.$/, '') : null;
+                    
+                    // Logic: If Forward matches and Reverse exists
+                    let status = 'NOT ACTIVE';
+                    let color = '#ef4444';
+
+                    if (aMatches) {
+                        status = 'A OK';
+                        color = '#10b981';
+                        if (ptrValue && (ptrValue === domains[0] || ptrValue.includes(domains[0]))) {
+                            status = 'RDNS OK';
+                        } else if (ptrValue) {
+                            status = 'PTR MISMATCH';
+                            color = '#f59e0b';
+                        }
+                    }
 
                     window.rdnsData[s.id] = { 
-                        status: matches ? 'RDNS OK' : 'NOT ACTIVE', 
-                        color: matches ? '#10b981' : '#ef4444',
+                        status: status, 
+                        color: color,
+                        ptr: ptrValue || 'No PTR Found',
                         date: now
                     };
                 } catch (e) {
                     window.rdnsData[s.id] = { status: 'ERROR', color: '#f59e0b', date: now };
                 }
-                window.refreshUI(); // Real-time update
+                window.refreshUI();
             };
 
             const runAll = async () => {
