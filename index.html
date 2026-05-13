@@ -1018,6 +1018,22 @@
         window.updateTrackCell = function(serverId, field, value) {
             if(!window.trackingData[serverId]) window.trackingData[serverId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
             window.trackingData[serverId][field] = value;
+            
+            // Real-time color update for the input
+            const val = value.toUpperCase().trim();
+            const input = event.target;
+            if(input && input.tagName === 'INPUT') {
+                if(val === 'CLEAN') {
+                    input.style.color = '#10b981';
+                    input.style.background = 'rgba(16,185,129,0.1)';
+                } else if(val === 'LISTED') {
+                    input.style.color = '#ef4444';
+                    input.style.background = 'rgba(239,68,68,0.1)';
+                } else {
+                    input.style.color = 'white';
+                    input.style.background = 'rgba(0,0,0,0.2)';
+                }
+            }
         };
 
         window.renderTrackingTable = function() {
@@ -1041,9 +1057,15 @@
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     
-                    let dayCells = days.map(d => 
-                        `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`
-                    ).join('');
+                    let dayCells = days.map(d => {
+                        const val = (trk[d] || '').toUpperCase().trim();
+                        let color = 'white';
+                        let bg = 'rgba(0,0,0,0.2)';
+                        if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
+                        if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
+                        
+                        return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:${bg}; border:1px solid transparent; color:${color}; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
+                    }).join('');
                     
                     html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                         <td style="font-weight:600; font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${idx === 0 ? s.name : '<span style="color:var(--text-secondary); margin-left:1rem;">↳</span>'}</td>
