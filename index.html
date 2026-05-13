@@ -1507,7 +1507,19 @@
                         ` : (ips[0] || '');
                         
                         const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
-                        const domainDisplay = domains.length > 1 ? `<span title="${domains.join(', ')}">${domains[0]} (+${domains.length-1})</span>` : (domains[0] || '-');
+                        const domainDisplay = domains.length > 1 ? `
+                            <div class="ip-cell-container">
+                                ${domains[0]} 
+                                <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${domains.length-1} more</span>
+                                <div class="ip-popover">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                                        <span style="font-size:0.6rem; color:var(--text-secondary);">Server Domains</span>
+                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${domains.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                                    </div>
+                                    ${domains.map(d => `<div class="ip-popover-item">${d}</div>`).join('')}
+                                </div>
+                            </div>
+                        ` : (domains[0] || '-');
 
                         return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`;
                     }).join('');
