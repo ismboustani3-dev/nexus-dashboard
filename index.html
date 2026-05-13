@@ -83,7 +83,7 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('history', this)"><i data-lucide="history"></i><span>History</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
+    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>Nexus</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
 
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
@@ -243,17 +243,6 @@
         </div>
 
             </div>
-        </div>
-
-        <div id="historyView" class="view" style="display:none; padding: 0 2rem;">
-            <div class="bl-header" style="margin-bottom: 2rem; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h2>Deletion History</h2>
-                    <p>Audit log of all removed servers.</p>
-                </div>
-                <button class="btn-secondary" onclick="if(confirm('Clear history?')) { window.deletionHistory=[]; window.saveData(); window.renderHistory(); }" style="color:#ef4444; border-color:rgba(239,68,68,0.2); background:rgba(239,68,68,0.05);">Clear Log</button>
-            </div>
-            <div id="historyContent" class="card-container" style="background:transparent; border:none; padding:0;"></div>
         </div>
 
         <div id="settingsView" class="view" style="display:none;"><div class="card-container" style="max-width: 800px;"><form onsubmit="window.saveSettings(event)"><h2>Admin Profile</h2><div class="form-group"><label>Name</label><input type="text" id="setAdminName" required></div><div class="form-group"><label>Password</label><input type="password" id="setAdminPass" placeholder="New password..."></div><button type="submit" class="btn-primary">Update</button></form><div class="user-mgmt-card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h2>Users</h2><button class="btn-primary" onclick="window.openUserModal()">Create User</button></div><div id="usersList"></div></div></div></div>
@@ -541,6 +530,7 @@
                     name: srv.name,
                     ip: (srv.ip || '').split(/[\s\n,]+/)[0] || '-',
                     owner: srv.owner || '-',
+                    team: srv.team,
                     deletedAt: new Date().toISOString()
                 });
             });
@@ -665,8 +655,8 @@
                             </div>
                         </div>`;
                 }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Class data</div>';
-                
-                return `<div class="team-column"><div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><div style="display:flex; gap:6px;"><button onclick="window.copyTeamNames(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">Names</button><button onclick="window.copyTeamIPs(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">IPs</button><button onclick="window.editTeamName('team${tId}')" style="font-size:0.6rem; padding:3px 6px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-secondary); border-radius:4px; cursor:pointer;">Edit</button></div></div><div class="team-analytics"><div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div><div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div><div class="analytics-card"><h4>Providers</h4><div style="margin-top:10px;">${asnList}</div></div><div class="analytics-card"><h4>Classes</h4><div style="margin-top:10px;">${classList}</div></div></div><div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead><tbody>${srvs.map(s => {
+
+                const rows = srvs.map(s => {
                     const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     const ipDisplay = ips.length > 1 ? `
                         <div class="ip-cell-container">
@@ -675,14 +665,81 @@
                             <div class="ip-popover">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
                                     <span style="font-size:0.6rem; color:var(--text-secondary);">Server IPs</span>
-                                    <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                                    <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
                                 </div>
                                 ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
                             </div>
                         </div>
                     ` : (ips[0] || '');
                     return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`;
-                }).join('')}</tbody></table></div></div>`;
+                }).join('');
+
+                // Render Deleted Servers for this team
+                const teamDeleted = (window.deletionHistory || []).filter(h => h.team == tId);
+                let historyHtml = '';
+                if(teamDeleted.length > 0) {
+                    const sorted = [...teamDeleted].sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+                    const groupedByMonth = sorted.reduce((acc, item) => {
+                        const d = new Date(item.deletedAt);
+                        const my = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                        if(!acc[my]) acc[my] = [];
+                        acc[my].push(item);
+                        return acc;
+                    }, {});
+
+                    historyHtml = `
+                        <div style="margin-top: 2rem; border-top: 1px dashed var(--border-color); padding-top: 1.5rem;">
+                            <h4 style="color:#ef4444; font-size:0.8rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:8px; letter-spacing:1px;">
+                                <i data-lucide="history" size="16"></i> DELETED SERVERS HISTORY
+                            </h4>
+                            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                                ${Object.entries(groupedByMonth).map(([month, items]) => `
+                                    <div style="background:rgba(239,68,68,0.03); border:1px solid rgba(239,68,68,0.1); border-radius:12px; padding:1.2rem;">
+                                        <div style="font-size:0.7rem; color:rgba(239,68,68,0.7); margin-bottom:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(239,68,68,0.1); padding-bottom:8px;">${month}</div>
+                                        <div style="max-height:200px; overflow-y:auto; padding-right:5px;">
+                                            <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                                                <tbody>
+                                                    ${items.map(it => `
+                                                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                                                            <td style="padding:6px 0; font-weight:600;">${it.name}</td>
+                                                            <td style="padding:6px 0; color:var(--text-secondary); text-align:right;">${it.ip}</td>
+                                                            <td style="padding:6px 0; color:var(--text-secondary); text-align:right; width:60px;">${it.owner}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="team-column">
+                        <div class="team-header team-${tId}" style="justify-content:space-between;">
+                            <span>${tName}</span>
+                            <div style="display:flex; gap:6px;">
+                                <button onclick="window.copyTeamNames(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">Names</button>
+                                <button onclick="window.copyTeamIPs(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">IPs</button>
+                                <button onclick="window.editTeamName('team${tId}')" style="font-size:0.6rem; padding:3px 6px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-secondary); border-radius:4px; cursor:pointer;">Edit</button>
+                            </div>
+                        </div>
+                        <div class="team-analytics">
+                            <div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div>
+                            <div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div>
+                            <div class="analytics-card"><h4>Providers</h4><div style="margin-top:10px;">${asnList}</div></div>
+                            <div class="analytics-card"><h4>Classes</h4><div style="margin-top:10px;">${classList}</div></div>
+                        </div>
+                        <div class="server-table-container">
+                            <table class="server-table">
+                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                        ${historyHtml}
+                    </div>`;
             };
             tg.innerHTML = '';
             if(teamFilter === 'all' || teamFilter === '1') tg.innerHTML += render(1, window.teamNames.team1);
@@ -783,6 +840,7 @@
                         name: srv.name,
                         ip: (srv.ip || '').split(/[\s\n,]+/)[0] || '-',
                         owner: srv.owner || '-',
+                        team: srv.team,
                         deletedAt: new Date().toISOString()
                     });
                 }
@@ -823,7 +881,6 @@
             document.querySelectorAll('.view').forEach(x => x.style.display = 'none'); 
             document.getElementById(v + 'View').style.display = 'block'; 
             if(v === 'tracking') window.renderTrackingTable();
-            if(v === 'history') window.renderHistory();
         };
 
         window.renderHistory = function() {
