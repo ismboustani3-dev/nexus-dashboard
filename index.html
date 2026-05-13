@@ -83,7 +83,7 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>WMN3</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
+    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>WMN3</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('dns', this)"><i data-lucide="search-code"></i><span>DNS Records</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
 
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
@@ -198,6 +198,63 @@
             <div id="teamGrid" class="team-grid"></div>
         </div>
 
+        <div id="dnsView" class="view" style="display:none; padding: 0 2rem;">
+            <div class="bl-header" style="margin-bottom: 2rem;">
+                <h2>DNS Records Checker</h2>
+                <p>Lookup DNS records (A, MX, TXT, etc.) for any domain instantly.</p>
+            </div>
+            
+            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px; padding:2rem; max-width:800px; margin:0 auto;">
+                <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase;">Domain Name</label>
+                        <input type="text" id="dnsDomainInput" placeholder="example.com" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:12px; color:white; outline:none; font-family:'Outfit';">
+                    </div>
+                    <div style="width:150px;">
+                        <label style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase;">Record Type</label>
+                        <select id="dnsTypeInput" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:12px; color:white; outline:none;">
+                            <option value="A">A</option>
+                            <option value="AAAA">AAAA</option>
+                            <option value="MX">MX</option>
+                            <option value="TXT">TXT</option>
+                            <option value="CNAME">CNAME</option>
+                            <option value="NS">NS</option>
+                            <option value="SOA">SOA</option>
+                            <option value="ANY">ANY</option>
+                        </select>
+                    </div>
+                    <button onclick="window.runDnsLookup()" class="btn-primary" style="align-self:flex-end; height:45px; padding:0 30px;">Lookup</button>
+                </div>
+
+                <div id="dnsResults" style="display:none;">
+                    <div style="margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.5rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h4 style="font-size:0.8rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px;">Lookup Results</h4>
+                            <span id="dnsResultDomain" style="color:var(--accent-color); font-weight:700; font-size:0.9rem;"></span>
+                        </div>
+                        <div class="bl-table-container">
+                            <table class="bl-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>TTL</th>
+                                        <th>Data / Result</th>
+                                        <th style="text-align:right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dnsResultBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dnsLoader" style="display:none; text-align:center; padding:2rem;">
+                    <div style="width:30px; height:30px; border:3px solid rgba(0,242,254,0.2); border-top:3px solid #00f2fe; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
+                    <p style="font-size:0.8rem; color:var(--text-secondary);">Querying DNS Servers...</p>
+                </div>
+            </div>
+        </div>
+
         <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
             <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -274,9 +331,6 @@
                         <tr><td colspan="11" style="text-align:center; color:var(--text-secondary); padding: 3rem;">Loading data...</td></tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-
             </div>
         </div>
 
@@ -802,6 +856,54 @@
             const data = { id, name: document.getElementById('sName').value, ip: document.getElementById('sIp').value, status: document.getElementById('sStatus').value, class: document.getElementById('sClass').value, owner: document.getElementById('sOwner').value, date: document.getElementById('sDate').value, noticeDate: document.getElementById('sNoticeDate').value, asn: document.getElementById('sAsn').value, nbrIp: document.getElementById('sNbrIp').value, team: document.getElementById('sTeam').value };
             const idx = window.servers.findIndex(s => s.id === id); if(idx > -1) window.servers[idx] = data; else window.servers.push(data);
             window.saveData(); window.closeServerModal();
+        };
+
+        window.runDnsLookup = async function() {
+            const domain = document.getElementById('dnsDomainInput').value.trim();
+            const type = document.getElementById('dnsTypeInput').value;
+            const resultsEl = document.getElementById('dnsResults');
+            const bodyEl = document.getElementById('dnsResultBody');
+            const loader = document.getElementById('dnsLoader');
+            const domainSpan = document.getElementById('dnsResultDomain');
+
+            if(!domain) return alert("Please enter a domain name.");
+
+            loader.style.display = 'block';
+            resultsEl.style.display = 'none';
+
+            try {
+                const response = await fetch(`https://dns.google/resolve?name=${domain}&type=${type}`);
+                const data = await response.json();
+
+                loader.style.display = 'none';
+                resultsEl.style.display = 'block';
+                domainSpan.textContent = domain;
+                bodyEl.innerHTML = '';
+
+                if(data.Answer) {
+                    data.Answer.forEach(ans => {
+                        const row = document.createElement('tr');
+                        // Google DNS types are numeric, let's map the common ones
+                        const typeMap = { 1:'A', 28:'AAAA', 15:'MX', 16:'TXT', 5:'CNAME', 2:'NS', 6:'SOA' };
+                        const typeStr = typeMap[ans.type] || ans.type;
+                        
+                        row.innerHTML = `
+                            <td style="font-weight:700; color:var(--accent-color);">${typeStr}</td>
+                            <td style="color:var(--text-secondary);">${ans.TTL}</td>
+                            <td style="font-family:monospace; font-size:0.8rem; color:white;">${ans.data}</td>
+                            <td style="text-align:right;">
+                                <button onclick="navigator.clipboard.writeText('${ans.data}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 1500)" style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy</button>
+                            </td>
+                        `;
+                        bodyEl.appendChild(row);
+                    });
+                } else {
+                    bodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary); padding:2rem;">No records found for this domain/type.</td></tr>`;
+                }
+            } catch (err) {
+                loader.style.display = 'none';
+                alert("DNS Lookup Error: " + err.message);
+            }
         };
 
         window.refreshUI = function() {
