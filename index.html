@@ -1831,30 +1831,32 @@
 
             for(let i=0; i < ips.length; i++) {
                 try {
-                    const res = await fetch(`https://ipwho.is/${ips[i]}`);
+                    const res = await fetch(`https://freeipapi.com/api/json/${ips[i]}`);
                     const data = await res.json();
                     
                     const row = document.createElement('tr');
-                    if(data.success) {
+                    // freeipapi doesn't have a 'success' field in the same way, but it returns data
+                    if(data.ipAddress) {
                         success++;
-                        providers[data.connection.isp] = (providers[data.connection.isp]||0)+1;
-                        regions[data.region] = (regions[data.region]||0)+1;
+                        const providerName = data.asName || 'Unknown ISP';
+                        providers[providerName] = (providers[providerName]||0)+1;
+                        regions[data.regionName] = (regions[data.regionName]||0)+1;
                         row.innerHTML = `
-                            <td style="font-weight:700; color:white;">${data.ip}</td>
+                            <td style="font-weight:700; color:white;">${data.ipAddress}</td>
                             <td><span style="color:#10b981; font-weight:700;">Success</span></td>
-                            <td style="color:#94a3b8;">${data.connection.isp}</td>
-                            <td style="color:#94a3b8;">${data.country}</td>
-                            <td style="color:#94a3b8;">${data.region}</td>
-                            <td style="color:#94a3b8;">${data.city}</td>
+                            <td style="color:#94a3b8;">${providerName}</td>
+                            <td style="color:#94a3b8;">${data.countryName}</td>
+                            <td style="color:#94a3b8;">${data.regionName}</td>
+                            <td style="color:#94a3b8;">${data.cityName}</td>
                         `;
                     } else {
                         failed++;
-                        row.innerHTML = `<td>${ips[i]}</td><td><span style="color:#ef4444;">Failed</span></td><td colspan="4">${data.message||'Invalid IP'}</td>`;
+                        row.innerHTML = `<td>${ips[i]}</td><td><span style="color:#ef4444;">Failed</span></td><td colspan="4">Invalid IP data</td>`;
                     }
                     body.appendChild(row);
                 } catch (e) { 
                     failed++;
-                    body.innerHTML += `<tr><td>${ips[i]}</td><td><span style="color:#ef4444;">Error</span></td><td colspan="4">Network error (HTTPS block?)</td></tr>`;
+                    body.innerHTML += `<tr><td>${ips[i]}</td><td><span style="color:#ef4444;">Error</span></td><td colspan="4">CORS/Network error</td></tr>`;
                 }
 
                 successEl.textContent = success;
