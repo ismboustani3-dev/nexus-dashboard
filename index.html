@@ -551,24 +551,48 @@
                 <input type="text" id="ipSearch" onkeyup="window.filterIpTable()" placeholder="Search IP / Provider / Country" style="width:300px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:4px; padding:8px 12px; color:white; outline:none; font-size:0.8rem;">
             </div>
 
-            <div id="ipStatsCard" class="dns-card" style="margin-bottom:2rem; display:none;">
-                <h3 style="font-size:1.1rem; margin-bottom:1rem;">Statistics</h3>
-                <div style="font-size:0.85rem; color:#94a3b8; line-height:1.8;">
-                    <div>Total: <span id="ipTotalCount">0</span></div>
-                    <div>Success: <span id="ipSuccessCount" style="color:#10b981;">0</span></div>
-                    <div>Failed: <span id="ipFailedCount" style="color:#ef4444;">0</span></div>
+            <div id="ipStatsCard" style="display:none; margin-bottom:2.5rem;">
+                <!-- Metric Grid -->
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem; margin-bottom:1.5rem;">
+                    <div class="dns-card" style="padding:1.5rem; text-align:center;">
+                        <p style="color:#94a3b8; font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Total IPs</p>
+                        <h3 id="ipTotalCount" style="font-size:2rem; font-family:'Outfit';">0</h3>
+                    </div>
+                    <div class="dns-card" style="padding:1.5rem; text-align:center; border-left:4px solid #10b981;">
+                        <p style="color:#94a3b8; font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Success</p>
+                        <h3 id="ipSuccessCount" style="font-size:2rem; font-family:'Outfit'; color:#10b981;">0</h3>
+                    </div>
+                    <div class="dns-card" style="padding:1.5rem; text-align:center; border-left:4px solid #ef4444;">
+                        <p style="color:#94a3b8; font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Failed</p>
+                        <h3 id="ipFailedCount" style="font-size:2rem; font-family:'Outfit'; color:#ef4444;">0</h3>
+                    </div>
                 </div>
-                <div class="dns-progress-bar" style="margin:1.5rem 0; height:12px; background:#1e293b;">
-                    <div id="ipProgressFill" class="dns-progress-fill" style="width:0%; background:#2563eb;"></div>
+
+                <!-- Progress Section -->
+                <div class="dns-card" style="padding:1.5rem; margin-bottom:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.75rem; color:#94a3b8; font-weight:600;">SCAN PROGRESS</span>
+                        <span id="ipProgressText" style="font-size:0.75rem; color:#2563eb; font-weight:700;">0%</span>
+                    </div>
+                    <div class="dns-progress-bar" style="height:8px; background:rgba(0,0,0,0.3); border-radius:10px;">
+                        <div id="ipProgressFill" class="dns-progress-fill" style="width:0%; background:#2563eb; border-radius:10px; transition:0.4s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                    </div>
                 </div>
                 
-                <div style="margin-bottom:1rem;">
-                    <h4 style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; margin-bottom:0.8rem;">Providers Count</h4>
-                    <div id="ipProviderBadges" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-                </div>
-                <div>
-                    <h4 style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; margin-bottom:0.8rem;">Regions Count</h4>
-                    <div id="ipRegionBadges" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                <!-- Distribution Section -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+                    <div class="dns-card" style="padding:1.5rem;">
+                        <h4 style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.2rem; display:flex; align-items:center; gap:8px;">
+                            <i data-lucide="server" size="14"></i> Providers Distribution
+                        </h4>
+                        <div id="ipProviderBadges" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                    </div>
+                    <div class="dns-card" style="padding:1.5rem;">
+                        <h4 style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.2rem; display:flex; align-items:center; gap:8px;">
+                            <i data-lucide="map-pin" size="14"></i> Regions Distribution
+                        </h4>
+                        <div id="ipRegionBadges" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1919,11 +1943,13 @@
 
                     successEl.textContent = success;
                     failedEl.textContent = failed;
-                    progress.style.width = `${(processed / ips.length) * 100}%`;
+                    const progressPerc = Math.round((processed / ips.length) * 100);
+                    progress.style.width = `${progressPerc}%`;
+                    document.getElementById('ipProgressText').textContent = `${progressPerc}%`;
 
                     // Update Badges
-                    provBadges.innerHTML = Object.entries(providers).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:4px 12px; border-radius:12px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937;">${k}: ${v}</span>`).join('');
-                    regBadges.innerHTML = Object.entries(regions).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:4px 12px; border-radius:12px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937;">${k}: ${v}</span>`).join('');
+                    provBadges.innerHTML = Object.entries(providers).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:6px 12px; border-radius:6px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937; display:flex; align-items:center; gap:6px;"><span style="color:#6366f1;">${v}</span> ${k}</span>`).join('');
+                    regBadges.innerHTML = Object.entries(regions).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:6px 12px; border-radius:6px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937; display:flex; align-items:center; gap:6px;"><span style="color:#a855f7;">${v}</span> ${k}</span>`).join('');
                 });
             }
         };
