@@ -221,8 +221,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <h1 style="font-family: 'Outfit';">Infrastructure Management</h1>
                 <div style="display:flex; gap:1rem;">
-                    <button class="btn-secondary" onclick="window.removeDuplicateServers()"><i data-lucide="trash-2" size="14"></i> Dedup</button>
-                    <button class="btn-secondary" onclick="window.openImportModal()"><i data-lucide="upload" size="14"></i> Import</button>
+                    <button class="btn-secondary" onclick="window.runRdnsAudit()"><i data-lucide="shield-check" size="14"></i> Run RDNS Audit</button>
                     <button class="btn-primary" onclick="window.openServerModal()">Add Server</button>
                 </div>
             </div>
@@ -802,23 +801,17 @@
                             servers: localServers || [],
                             teams: JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' },
                             settings: JSON.parse(localStorage.getItem('nexus_settings')) || { adminName: 'Admin', adminPass: 'admin', users: [] }
-                        };
-                        db.ref('nexus').set(data);
-                        alert("Great news! Your local data has been successfully migrated to the cloud.");
-                    } else {
-                        data = {};
-                    }
-                }
-
+            db.ref('nexus').once('value').then(snap => {
+                const data = snap.val() || {};
                 window.projects = data.projects || [];
                 window.servers = data.servers || [];
                 window.teamNames = data.teams || { team1: 'Team 1', team2: 'Team 2' };
-                window.settings = data.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
+                window.settings = data.settings || window.settings;
                 window.trackingData = data.tracking || {};
+                window.rdnsData = data.rdnsData || {};
                 window.deletionHistory = data.history || [];
                 window.currentUser.name = window.settings.adminName;
                 
-                // Populate Settings
                 document.getElementById('setAdminName').value = window.settings.adminName;
                 document.getElementById('setHetrixKey').value = window.settings.hetrixKey || '';
                 document.getElementById('setSpamhausToken').value = window.settings.spamhausToken || '';
@@ -1509,8 +1502,7 @@
                                 </div>
                             </div>
                         ` : (ips[0] || '');
-                        
-                        const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                            const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
                         const domainDisplay = domains.length > 1 ? `
                             <div class="ip-cell-container">
                                 ${domains[0]} 
@@ -1525,8 +1517,12 @@
                             </div>
                         ` : (domains[0] || '-');
 
-                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
+                        const rdnsStatus = (window.rdnsData || {})[s.id] || { status: 'PENDING', color: '#6b7280' };
+                        const rdnsDisplay = `<span style="color:${rdnsStatus.color}; font-weight:bold; font-size:0.7rem; border:1px solid ${rdnsStatus.color}44; padding:2px 6px; border-radius:4px;">${rdnsStatus.status}</span>`;
+
+                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td>${rdnsDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
                     }).join('');
+        }).join('');
 
                 // Render Deleted Servers for this team
                 let historyHtml = '';
@@ -1591,7 +1587,7 @@
                         </div>
                         <div class="server-table-container">
                             <table class="server-table">
-                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Domain</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
+                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Domain</th><th>RDNS</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
                                 <tbody>${rows}</tbody>
                             </table>
                         </div>
@@ -2267,6 +2263,65 @@
                 window.domainTracking = window.domainTracking.filter(d => d.id !== id);
                 window.saveDomainData();
             }
+        };
+
+        window.runRdnsAudit = function() {
+            const teamFilter = document.getElementById('teamViewFilter').value;
+            let srvs = window.servers;
+            if(teamFilter !== 'all') srvs = window.servers.filter(s => s.team == teamFilter);
+            
+            if(!window.rdnsData) window.rdnsData = {};
+            let count = 0;
+            const total = srvs.length;
+
+            if(total === 0) return alert('No servers to audit.');
+
+            const checkServer = async (s) => {
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                
+                if(ips.length === 0 || domains.length === 0) {
+                    window.rdnsData[s.id] = { status: 'NO DATA', color: '#6b7280' };
+                    return;
+                }
+
+                try {
+                    // Check first domain against first IP
+                    const res = await fetch(`https://dns.google/resolve?name=${domains[0]}&type=A`);
+                    const json = await res.json();
+                    const answers = json.Answer || [];
+                    const matches = answers.some(a => a.data === ips[0]);
+
+                    if(matches) {
+                        window.rdnsData[s.id] = { status: 'RDNS OK', color: '#10b981' };
+                    } else {
+                        window.rdnsData[s.id] = { status: 'NOT ACTIVE', color: '#ef4444' };
+                    }
+                } catch (e) {
+                    window.rdnsData[s.id] = { status: 'ERROR', color: '#f59e0b' };
+                }
+            };
+
+            const runAll = async () => {
+                const btn = document.querySelector('button[onclick="window.runRdnsAudit()"]');
+                const oldHtml = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Auditing...';
+                btn.disabled = true;
+
+                for(let s of srvs) {
+                    await checkServer(s);
+                    count++;
+                }
+
+                btn.innerHTML = oldHtml;
+                btn.disabled = false;
+                window.refreshUI();
+                // Save results to Firebase
+                db.ref('nexus/rdnsData').set(window.rdnsData);
+                alert(`RDNS Audit Complete for ${count} servers!`);
+            };
+
+            runAll();
         };
 
         window.renderDomainTable = function() {
