@@ -140,22 +140,43 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar"><div class="logo"><i data-lucide="layers"></i><span>WMN3</span></div><nav class="nav-links"><li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li><li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('tracking', this)"><i data-lucide="calendar-check"></i><span>Check Blacklist</span></a></li>
-    
-    <li class="nav-item">
-        <a href="#" class="nav-link" onclick="window.toggleTools(this)">
-            <i data-lucide="wrench"></i><span>Tools</span>
-            <i data-lucide="chevron-down" class="submenu-arrow"></i>
-        </a>
-        <ul class="submenu" id="toolsSubmenu">
-            <li onclick="window.switchView('dns')">• DNS Scanner</li>
-            <li onclick="window.switchView('extraction')">• Extraction</li>
-            <li onclick="window.switchView('ipProvider')">• IP Provider</li>
-            <li onclick="window.switchView('deploy')">• Deploy</li>
-        </ul>
-    </li>
+    <aside class="sidebar">
+        <div class="logo"><i data-lucide="layers"></i><span>WMN3</span></div>
+        <nav class="nav-links">
+            <li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li>
+            
+            <li class="nav-item">
+                <a href="#" class="nav-link" onclick="window.toggleSubmenu('blacklistSubmenu', this)">
+                    <i data-lucide="shield-check"></i><span>Check Blacklist</span>
+                    <i data-lucide="chevron-down" class="submenu-arrow"></i>
+                </a>
+                <ul class="submenu" id="blacklistSubmenu">
+                    <li onclick="window.switchView('tracking', this)">• IP Blacklist</li>
+                    <li onclick="window.switchView('domainBlacklist', this)">• Domain Blacklist</li>
+                </ul>
+            </li>
 
-    <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li></nav><div class="nav-item" style="margin-top: auto;"><a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a></div></aside>
+            <li class="nav-item">
+                <a href="#" class="nav-link" onclick="window.toggleSubmenu('toolsSubmenu', this)">
+                    <i data-lucide="wrench"></i><span>Tools</span>
+                    <i data-lucide="chevron-down" class="submenu-arrow"></i>
+                </a>
+                <ul class="submenu" id="toolsSubmenu">
+                    <li onclick="window.switchView('dns')">• DNS Scanner</li>
+                    <li onclick="window.switchView('extraction')">• Extraction</li>
+                    <li onclick="window.switchView('ipProvider')">• IP Provider</li>
+                    <li onclick="window.switchView('deploy')">• Deploy</li>
+                </ul>
+            </li>
+
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('settings', this)"><i data-lucide="settings"></i><span>Settings</span></a></li>
+        </nav>
+        <div class="nav-item" style="margin-top: auto;">
+            <a href="#" class="nav-link" onclick="window.logout()"><i data-lucide="log-out"></i><span>Reset</span></a>
+        </div>
+    </aside>
 
     <main class="main-content">
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
@@ -356,7 +377,7 @@
         <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
             <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <h2>Check Blacklist</h2>
+                    <h2>IP Blacklist</h2>
                     <p>Track the daily status of your IPs across teams.</p>
                 </div>
                 <div id="schedulerStatus" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px;">
@@ -425,10 +446,27 @@
                             <th>NOTES</th>
                         </tr>
                     </thead>
-                    <tbody id="trackingTableBody">
-                        <tr><td colspan="11" style="text-align:center; color:var(--text-secondary); padding: 3rem;">Loading data...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div id="domainBlacklistView" class="view" style="display:none; padding: 0 2rem;">
+            <div class="bl-header" style="margin-bottom: 2rem;">
+                <h2>Domain Blacklist</h2>
+                <p>Monitor your domain health and reputation status.</p>
+            </div>
+            
+            <div class="dns-card" style="padding:3rem; text-align:center;">
+                <div style="width:80px; height:80px; background:rgba(99,102,241,0.1); border-radius:20px; display:flex; align-items:center; justify-content:center; color:#6366f1; margin:0 auto 2rem;">
+                    <i data-lucide="globe" size="40"></i>
+                </div>
+                <h3 style="font-size:1.5rem; margin-bottom:1rem;">Domain Blacklist Module</h3>
+                <p style="color:#94a3b8; max-width:500px; margin:0 auto 2rem;">This module allows you to track domain-specific blacklists and spamhaus status. Data will be synchronized with your project domains.</p>
+                <div style="display:flex; justify-content:center; gap:1rem;">
+                    <button class="btn-primary" style="padding:12px 30px;">Add Domains to Track</button>
+                    <button class="dns-action-btn" style="padding:12px 30px;">Import from Projects</button>
+                </div>
             </div>
         </div>
 
@@ -1606,17 +1644,27 @@
             if(v === 'team') window.renderTeamStats();
         };
 
-        window.toggleTools = function(el) {
-            const sub = document.getElementById('toolsSubmenu');
+        window.toggleSubmenu = function(id, el) {
+            const sub = document.getElementById(id);
             const arrow = el.querySelector('.submenu-arrow');
             const isOpen = sub.style.display === 'flex';
             
+            // Close other submenus first for a cleaner look
+            document.querySelectorAll('.submenu').forEach(s => {
+                if(s.id !== id) s.style.display = 'none';
+            });
+            document.querySelectorAll('.submenu-arrow').forEach(a => {
+                if(a !== arrow) a.classList.remove('rotate-180');
+            });
+
             sub.style.display = isOpen ? 'none' : 'flex';
             if(isOpen) arrow.classList.remove('rotate-180');
             else arrow.classList.add('rotate-180');
             
             el.classList.toggle('active');
         };
+
+        window.toggleTools = function(el) { window.toggleSubmenu('toolsSubmenu', el); };
 
         window.renderHistory = function() {
             const container = document.getElementById('historyContent');
