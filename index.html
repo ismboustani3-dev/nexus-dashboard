@@ -204,10 +204,21 @@
                 <p>Track the daily status of your IPs across teams.</p>
             </div>
             
-            <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
                 <div class="bl-toggle">
                     <button id="btnTrackTeam1" class="active" onclick="window.setTrackTeam(1)">Team 1</button>
                     <button id="btnTrackTeam2" onclick="window.setTrackTeam(2)">Team 2</button>
+                </div>
+            </div>
+
+            <div id="trackingStats" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:1.2rem; display:flex; align-items:center; gap:15px;">
+                    <div style="width:40px; height:40px; background:#10b981; border-radius:10px; display:flex; align-items:center; justify-content:center; color:black;"><i data-lucide="check-circle" size="20"></i></div>
+                    <div><div style="font-size:0.7rem; color:rgba(16,185,129,0.8); font-weight:700; text-transform:uppercase;">Clean Today</div><div id="totalCleanIps" style="font-size:1.5rem; font-weight:800; color:#10b981; line-height:1;">0</div></div>
+                </div>
+                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:1.2rem; display:flex; align-items:center; gap:15px;">
+                    <div style="width:40px; height:40px; background:#ef4444; border-radius:10px; display:flex; align-items:center; justify-content:center; color:black;"><i data-lucide="alert-triangle" size="20"></i></div>
+                    <div><div style="font-size:0.7rem; color:rgba(239,68,68,0.8); font-weight:700; text-transform:uppercase;">Listed Today</div><div id="totalListedIps" style="font-size:1.5rem; font-weight:800; color:#ef4444; line-height:1;">0</div></div>
                 </div>
             </div>
             
@@ -1043,10 +1054,15 @@
             
             if(teamServers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 3rem; color:var(--text-secondary);">No servers found for this team. Add servers in the Team view first.</td></tr>';
+                document.getElementById('totalCleanIps').textContent = '0';
+                document.getElementById('totalListedIps').textContent = '0';
                 return;
             }
             
             const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase();
+            let cleanCount = 0;
+            let listedCount = 0;
             let html = '';
             
             teamServers.forEach(s => {
@@ -1057,6 +1073,10 @@
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     
+                    const todayVal = (trk[today] || '').toUpperCase().trim();
+                    if(todayVal === 'CLEAN') cleanCount++;
+                    if(todayVal === 'LISTED') listedCount++;
+
                     let dayCells = days.map(d => {
                         const val = (trk[d] || '').toUpperCase().trim();
                         let color = 'white';
@@ -1077,7 +1097,10 @@
                 });
             });
             
+            document.getElementById('totalCleanIps').textContent = cleanCount;
+            document.getElementById('totalListedIps').textContent = listedCount;
             tbody.innerHTML = html;
+            if(window.lucide) lucide.createIcons();
         };
 
         window.exportTrackingCSV = function() {
