@@ -97,6 +97,10 @@
                 <div class="stat-card" style="border-left: 4px solid #f59e0b;"><div class="stat-info"><h3>Global IPs</h3><p id="dashTotalIps">0</p></div></div>
             </div>
             <div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div>
+            <div class="card-container" style="margin-top:2rem;">
+                <h2>Global Class Distribution</h2>
+                <div id="globalClassDist" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:2rem; margin-top:1rem;"></div>
+            </div>
         </div>
         <div id="projectsView" class="view" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
@@ -545,6 +549,26 @@
             document.getElementById('dashTotalServers').textContent = totalSrv;
             document.getElementById('dashTotalIps').textContent = totalIpsGlobal;
             document.getElementById('dashProdServers').textContent = prodSrv;
+
+            // Global Class Dist
+            const gClassCounts = window.servers.reduce((a,s) => { if(s.class) a[s.class] = (a[s.class]||0)+1; return a; }, {});
+            const gClassEl = document.getElementById('globalClassDist');
+            if(gClassEl) {
+                gClassEl.innerHTML = Object.entries(gClassCounts).map(([cls, count]) => {
+                    const perc = totalSrv > 0 ? ((count / totalSrv) * 100).toFixed(0) : 0;
+                    return `
+                        <div class="analytics-card" style="border-left: 4px solid #a855f7;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4 style="margin:0;">Class ${cls}</h4>
+                                <span style="color:#a855f7; font-weight:700; font-size:1.1rem;">${perc}%</span>
+                            </div>
+                            <div style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">${count} Servers</div>
+                            <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+                                <div style="height:100%; width:${perc}%; background:#a855f7; border-radius:3px; transition: width 0.5s;"></div>
+                            </div>
+                        </div>`;
+                }).join('') || '<div style="color:var(--text-secondary); font-size:0.8rem;">No class data available.</div>';
+            }
 
             const ownerFilter = document.getElementById('globalOwnerFilter').value;
             const owners = [...new Set(window.servers.map(s => s.owner).filter(o => o))];
