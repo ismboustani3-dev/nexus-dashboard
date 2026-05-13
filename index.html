@@ -262,9 +262,9 @@
                 <div id="managementTools" style="display:none; margin-top:1.5rem;">
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:1.5rem;">
                         <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
-                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Complex) — team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
+                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Simple: team;name;ip;domain | Complex: 9-parts)</p>
                             <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                                <textarea id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
+                                <textarea id="quickAddInput" placeholder="1;srv_001;1.1.1.1;domain.com" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
                                 <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap; padding: 10px 20px;">Add</button>
                             </div>
                         </div>
@@ -916,30 +916,36 @@
                 const clean = line.trim();
                 if (!clean) return;
                 const p = clean.split(';');
+                
+                const activeOwnerFilter = document.getElementById('globalOwnerFilter').value;
+                const inheritedOwner = activeOwnerFilter !== 'all' ? activeOwnerFilter : '';
+                const id = Date.now().toString() + Math.random().toString(36).substr(2, 4);
+
+                if (p.length === 4) {
+                    // Simple format: team;name;ip;domain
+                    let rawTeam = (p[0] || '1').trim().toLowerCase();
+                    let teamNum = rawTeam.includes('2') ? '2' : '1';
+                    window.servers.push({
+                        id, team: teamNum, name: (p[1] || '').trim(), ip: (p[2] || '').trim(), domain: (p[3] || '').trim(),
+                        status: 'Active', class: '', date: new Date().toLocaleDateString(), noticeDate: '', asn: '', nbrIp: '1', owner: inheritedOwner
+                    });
+                    addedCount++;
+                    return;
+                }
+
                 if(p.length < 9) {
                     errors++;
                     return;
                 }
-                const activeOwnerFilter = document.getElementById('globalOwnerFilter').value;
-                const inheritedOwner = activeOwnerFilter !== 'all' ? activeOwnerFilter : '';
                 
                 let rawTeam = (p[0] || '1').trim().toLowerCase();
                 let teamNum = rawTeam.includes('2') ? '2' : '1';
 
                 window.servers.push({
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                    team: teamNum,
-                    name: (p[1] || '').trim(),
-                    ip: (p[2] || '').trim(),
-                    status: (p[3] || '').trim(),
-                    class: (p[4] || '').trim(),
-                    date: (p[5] || '').trim(),
-                    entre: '',
-                    notice: '',
-                    noticeDate: (p[6] || '').trim(),
-                    asn: (p[7] || '').trim(),
-                    nbrIp: (p[8] || '0').trim(),
-                    owner: inheritedOwner
+                    id, team: teamNum, name: (p[1] || '').trim(), ip: (p[2] || '').trim(),
+                    status: (p[3] || '').trim(), class: (p[4] || '').trim(), date: (p[5] || '').trim(),
+                    noticeDate: (p[6] || '').trim(), asn: (p[7] || '').trim(), nbrIp: (p[8] || '0').trim(),
+                    domain: '', owner: inheritedOwner
                 });
                 addedCount++;
             });
