@@ -162,29 +162,38 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:1.5rem;">
-                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
-                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Complex) — team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
-                    <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                        <textarea id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
-                        <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap; padding: 10px 20px;">Add</button>
-                    </div>
-                </div>
+            <div class="card-container" style="margin-bottom: 2rem; border: 1px solid rgba(0, 242, 254, 0.2); background: rgba(0, 242, 254, 0.02);">
+                <button onclick="const el = document.getElementById('managementTools'); const isHidden = el.style.display === 'none'; el.style.display = isHidden ? 'block' : 'none'; document.getElementById('toolChevron').style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';" style="background:transparent; border:none; color:var(--text-primary); font-family:'Outfit'; font-size:1.1rem; display:flex; align-items:center; gap:8px; cursor:pointer; width:100%; justify-content:space-between; padding:0;">
+                    <div style="display:flex; align-items:center; gap:8px;"><i data-lucide="wrench" size="20" style="color:var(--accent-color);"></i> Bulk Management Tools</div>
+                    <i data-lucide="chevron-down" style="transition:0.3s;" id="toolChevron"></i>
+                </button>
+                
+                <div id="managementTools" style="display:none; margin-top:1.5rem;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:1.5rem;">
+                        <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
+                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Add (Complex) — team;SERVERS;main ip;statut;class;date entre;notice date;AASN;nbr ip</p>
+                            <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                                <textarea id="quickAddInput" placeholder="1;srv_001;192.168.1.1;PROD;29;01/01/2026;01/06/2026;OVH;5" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
+                                <button class="btn-primary" onclick="window.quickAddServer()" style="white-space:nowrap; padding: 10px 20px;">Add</button>
+                            </div>
+                        </div>
 
-                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
-                    <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Delete — Paste Server Names (One per line)</p>
-                    <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                        <textarea id="quickDeleteInput" placeholder="srv_001&#10;srv_002" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
-                        <button onclick="window.quickDeleteServer()" style="white-space:nowrap; padding: 10px 20px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.5); color:#ef4444; border-radius:8px; cursor:pointer; font-weight:600;">Delete</button>
+                        <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
+                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">Quick Delete — Paste Server Names (One per line)</p>
+                            <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                                <textarea id="quickDeleteInput" placeholder="srv_001&#10;srv_002" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:60px; resize:vertical;"></textarea>
+                                <button onclick="window.quickDeleteServer()" style="white-space:nowrap; padding: 10px 20px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.5); color:#ef4444; border-radius:8px; cursor:pointer; font-weight:600;">Delete</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:1rem; margin-bottom: 2rem;">
-                <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;"><strong>Bulk Group Import (Vertical)</strong> — Format: <strong>ServerName</strong> followed by <strong>IPs</strong> on new lines.</p>
-                <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                    <textarea id="simpleBulkInput" placeholder="srv_001&#10;1.1.1.1&#10;1.1.1.2&#10;srv_002&#10;2.2.2.1" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:100px; resize:vertical;"></textarea>
-                    <button class="btn-primary" onclick="window.simpleBulkAdd()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Import Group</button>
+                    <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:12px; padding:1rem;">
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;"><strong>Bulk Group Import (Vertical)</strong> — Format: <strong>ServerName</strong> followed by <strong>IPs</strong> on new lines.</p>
+                        <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                            <textarea id="simpleBulkInput" placeholder="srv_001&#10;1.1.1.1&#10;1.1.1.2&#10;srv_002&#10;2.2.2.1" style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; font-size:0.8rem; font-family:monospace; outline:none; min-height:100px; resize:vertical;"></textarea>
+                            <button class="btn-primary" onclick="window.simpleBulkAdd()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Import Group</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
