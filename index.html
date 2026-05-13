@@ -646,6 +646,56 @@
             if(window.lucide) lucide.createIcons();
         };
 
+        window.editServer = function(id) {
+            const s = window.servers.find(x => x.id === id);
+            if(!s) return;
+            document.getElementById('serverId').value = s.id;
+            document.getElementById('sName').value = s.name;
+            document.getElementById('sIp').value = s.ip;
+            document.getElementById('sStatus').value = s.status || 'Active';
+            document.getElementById('sClass').value = s.class || '';
+            document.getElementById('sOwner').value = s.owner || '';
+            document.getElementById('sDate').value = s.date || '';
+            document.getElementById('sNoticeDate').value = s.noticeDate || '';
+            document.getElementById('sAsn').value = s.asn || '';
+            document.getElementById('sNbrIp').value = s.nbrIp || '0';
+            document.getElementById('sTeam').value = s.team || '1';
+            document.getElementById('serverModalOverlay').style.display = 'flex';
+        };
+
+        window.deleteServer = function(id) {
+            if(confirm('Delete this server?')) {
+                window.servers = window.servers.filter(s => s.id !== id);
+                window.saveData();
+            }
+        };
+
+        window.editProject = function(id) {
+            const p = window.projects.find(x => x.id === id);
+            if(!p) return;
+            document.getElementById('projectId').value = p.id;
+            document.getElementById('ownerName').value = p.owner;
+            document.getElementById('projectName').value = p.name;
+            document.getElementById('projectLink').value = p.link;
+            document.getElementById('username').value = p.username;
+            document.getElementById('password').value = p.password;
+            document.getElementById('modalOverlay').style.display = 'flex';
+        };
+
+        window.deleteProject = function(id) {
+            if(confirm('Delete this project?')) {
+                window.projects = window.projects.filter(p => p.id !== id);
+                window.saveData();
+            }
+        };
+
+        window.deleteUser = function(owner) {
+            if(confirm(`Delete all projects for ${owner}?`)) {
+                window.projects = window.projects.filter(p => p.owner !== owner);
+                window.saveData();
+            }
+        };
+
         window.switchView = function(v, el) { 
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
             if(el) el.classList.add('active'); 
