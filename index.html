@@ -572,9 +572,23 @@
                                 <div style="height:100%; width:${perc}%; background:var(--accent-color); border-radius:2px; transition: width 0.5s;"></div>
                             </div>
                         </div>`;
-                }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No ASN data</div>';
+                }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Provider data</div>';
+
+                const classCounts = srvs.reduce((a,s) => { if(s.class) a[s.class] = (a[s.class]||0)+1; return a; }, {});
+                const classList = Object.entries(classCounts).map(([cls, count]) => {
+                    const perc = srvs.length > 0 ? ((count / srvs.length) * 100).toFixed(0) : 0;
+                    return `
+                        <div style="margin-bottom: 8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:2px;">
+                                <span>Class ${cls}</span><span style="color:#a855f7; font-weight:bold;">${perc}%</span>
+                            </div>
+                            <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                                <div style="height:100%; width:${perc}%; background:#a855f7; border-radius:2px; transition: width 0.5s;"></div>
+                            </div>
+                        </div>`;
+                }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Class data</div>';
                 
-                return `<div class="team-column"><div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><div style="display:flex; gap:6px;"><button onclick="window.copyTeamNames(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">Names</button><button onclick="window.copyTeamIPs(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">IPs</button><button onclick="window.editTeamName('team${tId}')" style="font-size:0.6rem; padding:3px 6px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-secondary); border-radius:4px; cursor:pointer;">Edit</button></div></div><div class="team-analytics"><div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div><div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div><div class="analytics-card" style="grid-column: span 2;"><h4>Providers Distribution</h4><div style="margin-top:10px;">${asnList}</div></div></div><div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead><tbody>${srvs.map(s => {
+                return `<div class="team-column"><div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><div style="display:flex; gap:6px;"><button onclick="window.copyTeamNames(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">Names</button><button onclick="window.copyTeamIPs(${tId})" style="font-size:0.6rem; padding:3px 6px; background:rgba(0,242,254,0.1); color:var(--accent-color); border:1px solid rgba(0,242,254,0.3); border-radius:4px; cursor:pointer;">IPs</button><button onclick="window.editTeamName('team${tId}')" style="font-size:0.6rem; padding:3px 6px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:var(--text-secondary); border-radius:4px; cursor:pointer;">Edit</button></div></div><div class="team-analytics"><div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div><div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div><div class="analytics-card"><h4>Providers</h4><div style="margin-top:10px;">${asnList}</div></div><div class="analytics-card"><h4>Classes</h4><div style="margin-top:10px;">${classList}</div></div></div><div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead><tbody>${srvs.map(s => {
                     const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     const ipDisplay = ips.length > 1 ? `
                         <div class="ip-cell-container">
