@@ -199,9 +199,18 @@
         </div>
 
         <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
-            <div class="bl-header" style="margin-bottom: 1.5rem;">
-                <h2>Check Blacklist</h2>
-                <p>Track the daily status of your IPs across teams.</p>
+            <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2>Check Blacklist</h2>
+                    <p>Track the daily status of your IPs across teams.</p>
+                </div>
+                <div id="schedulerStatus" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px;">
+                    <div style="width:8px; height:8px; background:#00f2fe; border-radius:50%; animation: pulse 2s infinite;"></div>
+                    <span style="font-size:0.7rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
+                </div>
+                <style>
+                    @keyframes pulse { 0% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.4; transform: scale(1); } }
+                </style>
             </div>
             
             <div style="text-align: center; margin-bottom: 1.5rem;">
@@ -419,6 +428,9 @@
                     }
                     window.refreshUI();
                 });
+                
+                // Initialize Background Scheduler
+                window.startBackgroundScheduler();
             }).catch(err => {
                 alert("Firebase connection error: " + err.message);
                 const lEl = document.getElementById('fbLoader');
@@ -742,6 +754,34 @@
                 alert('No duplicate IPs found!');
             }
         };
+        
+        window.lastAutoScanDate = "";
+        window.startBackgroundScheduler = function() {
+            console.log("Background Scheduler Started. Monitoring for 09:00 AM...");
+            setInterval(() => {
+                const now = new Date();
+                const hrs = now.getHours();
+                const mins = now.getMinutes();
+                const timeStr = hrs.toString().padStart(2, '0') + ":" + mins.toString().padStart(2, '0');
+                const dateStr = now.toDateString(); 
+                
+                if(timeStr === "09:00" && window.lastAutoScanDate !== dateStr) {
+                    window.lastAutoScanDate = dateStr;
+                    console.log("SCHEDULED TASK: Starting automatic 09:00 AM scan...");
+                    
+                    const originalTeam = window.activeTrackTeam;
+                    (async () => {
+                        window.setTrackTeam(1);
+                        await window.runAutoScan();
+                        window.setTrackTeam(2);
+                        await window.runAutoScan();
+                        window.setTrackTeam(originalTeam);
+                        console.log("SCHEDULED TASK: Completed successfully.");
+                    })();
+                }
+            }, 30000);
+        };
+
         window.saveSettings = function(e) {
             e.preventDefault();
             const newName = document.getElementById('setAdminName').value;
