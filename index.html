@@ -582,9 +582,12 @@
             
             <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:16px; padding:2rem; margin-bottom:2rem;">
                 <textarea id="ipBulkInput" class="dns-textarea" style="height:150px; width:300px; margin-bottom:1rem;" placeholder="8.8.8.8&#10;1.1.1.1&#10;..."></textarea>
-                <div style="display:flex; gap:10px; margin-bottom:1.5rem;">
+                <div style="display:flex; gap:10px; margin-bottom:1.5rem; flex-wrap:wrap;">
                     <button class="btn-dns-start" onclick="window.runIpLookup()" style="width:fit-content; padding:8px 24px; background:#2563eb; margin-top:0;">Check IPs</button>
-                    <button class="dns-action-btn" onclick="window.downloadIpCsv()" style="padding:8px 24px;">Download CSV</button>
+                    <button class="dns-action-btn" onclick="window.loadTeamIps(1)" style="padding:8px 16px; border-color:#10b981; color:#10b981;">Load Team 1</button>
+                    <button class="dns-action-btn" onclick="window.loadTeamIps(2)" style="padding:8px 16px; border-color:#a855f7; color:#a855f7;">Load Team 2</button>
+                    <button class="dns-action-btn" onclick="window.loadTeamIps('all')" style="padding:8px 16px; border-color:#f59e0b; color:#f59e0b;">Load All</button>
+                    <button class="dns-action-btn" onclick="window.downloadIpCsv()" style="padding:8px 24px; margin-left:auto;">Download CSV</button>
                 </div>
                 <input type="text" id="ipSearch" onkeyup="window.filterIpTable()" placeholder="Search IP / Provider / Country" style="width:300px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:4px; padding:8px 12px; color:white; outline:none; font-size:0.8rem;">
             </div>
@@ -2085,6 +2088,27 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.setAttribute('href', url); a.setAttribute('download', 'ip_provider_results.csv'); a.click();
+        };
+
+        window.loadTeamIps = function(teamId) {
+            let filtered = window.servers;
+            if (teamId !== 'all') {
+                filtered = window.servers.filter(s => parseInt(s.team) === parseInt(teamId));
+            }
+            
+            const allIps = [];
+            filtered.forEach(s => {
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                allIps.push(...ips);
+            });
+
+            if (allIps.length === 0) {
+                alert(`No IPs found for ${teamId === 'all' ? 'any team' : 'Team ' + teamId}`);
+                return;
+            }
+
+            document.getElementById('ipBulkInput').value = allIps.join('\n');
+            window.runIpLookup();
         };
 
         window.onload = function() {
