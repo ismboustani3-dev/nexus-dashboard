@@ -285,6 +285,10 @@
                             <button class="btn-primary" onclick="window.simpleBulkAdd()" style="white-space:nowrap; padding: 10px 20px; height: 100%;">Import Data</button>
                         </div>
                     </div>
+                    <div style="background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:1rem; margin-top:1.5rem;">
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;"><strong>Export IP;Domain Pairs</strong> — Export all data for current team in semicolon format.</p>
+                        <button class="btn-primary" onclick="window.copyAllTeamPairs()" style="width:100%; background:linear-gradient(135deg, #6366f1, #4f46e5);"><i data-lucide="copy" size="14"></i> Copy All Team Pairs (IP;Domain)</button>
+                    </div>
                 </div>
             </div>
 
@@ -1521,7 +1525,7 @@
                             </div>
                         ` : (domains[0] || '-');
 
-                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`;
+                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
                     }).join('');
 
                 // Render Deleted Servers for this team
@@ -2167,6 +2171,36 @@
                 const text = r.textContent.toLowerCase();
                 r.style.display = text.includes(query) ? '' : 'none';
             });
+        };
+
+        window.copyServerPairs = function(id) {
+            const s = window.servers.find(x => x.id === id);
+            if(!s) return;
+            const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+            const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+            const max = Math.max(ips.length, domains.length);
+            const pairs = [];
+            for(let i=0; i<max; i++) { pairs.push(`${ips[i] || ''};${domains[i] || ''}`); }
+            navigator.clipboard.writeText(pairs.join('\n'));
+            alert(`Copied ${pairs.length} pairs to clipboard!`);
+        };
+
+        window.copyAllTeamPairs = function() {
+            const teamFilter = document.getElementById('teamViewFilter').value;
+            let srvs = window.servers;
+            if(teamFilter !== 'all') srvs = window.servers.filter(s => s.team == teamFilter);
+            
+            const allPairs = [];
+            srvs.forEach(s => {
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                const max = Math.max(ips.length, domains.length);
+                for(let i=0; i<max; i++) { allPairs.push(`${ips[i] || ''};${domains[i] || ''}`); }
+            });
+            
+            if(allPairs.length === 0) return alert('No data to export.');
+            navigator.clipboard.writeText(allPairs.join('\n'));
+            alert(`Copied ${allPairs.length} IP;Domain pairs to clipboard!`);
         };
 
         window.downloadIpCsv = function() {
