@@ -602,6 +602,7 @@
                         <tr>
                             <th>IP</th>
                             <th>Status</th>
+                            <th>ASN</th>
                             <th>Provider</th>
                             <th>Country</th>
                             <th>Region</th>
@@ -1856,32 +1857,64 @@
             // API 1: ipwho.is
             let data = await window.fetchIpAPI(`https://ipwho.is/${ip}`);
             if (data && data.success !== false) {
-                const res = { ip, status: "Success", provider: data.connection?.isp || "Unknown", country: data.country || "", region: data.region || "", city: data.city || "" };
+                const res = { 
+                    ip, 
+                    status: "Success", 
+                    asn: data.connection?.asn || "N/A",
+                    provider: data.connection?.isp || "Unknown", 
+                    country: data.country || "", 
+                    region: data.region || "", 
+                    city: data.city || "" 
+                };
                 window.ipCache[ip] = res; return res;
             }
 
             // API 2: ipapi.co
             data = await window.fetchIpAPI(`https://ipapi.co/${ip}/json/`);
             if (data && !data.error) {
-                const res = { ip, status: "Success", provider: data.org || "Unknown", country: data.country_name || "", region: data.region || "", city: data.city || "" };
+                const res = { 
+                    ip, 
+                    status: "Success", 
+                    asn: data.asn || "N/A",
+                    provider: data.org || "Unknown", 
+                    country: data.country_name || "", 
+                    region: data.region || "", 
+                    city: data.city || "" 
+                };
                 window.ipCache[ip] = res; return res;
             }
 
             // API 3: ipinfo.io
             data = await window.fetchIpAPI(`https://ipinfo.io/${ip}/json`);
             if (data && !data.error) {
-                const res = { ip, status: "Success", provider: data.org || "Unknown", country: data.country || "", region: data.region || "", city: data.city || "" };
+                const res = { 
+                    ip, 
+                    status: "Success", 
+                    asn: data.asn || "N/A",
+                    provider: data.org || "Unknown", 
+                    country: data.country || "", 
+                    region: data.region || "", 
+                    city: data.city || "" 
+                };
                 window.ipCache[ip] = res; return res;
             }
 
             // API 4: freeipapi.com
             data = await window.fetchIpAPI(`https://freeipapi.com/api/json/${ip}`);
             if (data && data.ipAddress) {
-                const res = { ip, status: "Success", provider: data.asName || "Unknown", country: data.countryName || "", region: data.regionName || "", city: data.cityName || "" };
+                const res = { 
+                    ip, 
+                    status: "Success", 
+                    asn: data.asNumber ? `AS${data.asNumber}` : "N/A",
+                    provider: data.asName || "Unknown", 
+                    country: data.countryName || "", 
+                    region: data.regionName || "", 
+                    city: data.cityName || "" 
+                };
                 window.ipCache[ip] = res; return res;
             }
 
-            return { ip, status: "Failed", provider: "Fetch Error (All APIs failed)", country: "", region: "", city: "" };
+            return { ip, status: "Failed", asn: "N/A", provider: "Fetch Error (All APIs failed)", country: "", region: "", city: "" };
         }
 
         window.runIpLookup = async function() {
@@ -1931,6 +1964,7 @@
                         row.innerHTML = `
                             <td style="font-weight:700; color:white;">${data.ip}</td>
                             <td><span style="color:#10b981; font-weight:700;">Success</span></td>
+                            <td style="color:#94a3b8;">${data.asn}</td>
                             <td style="color:#94a3b8;">${data.provider}</td>
                             <td style="color:#94a3b8;">${data.country}</td>
                             <td style="color:#94a3b8;">${data.region}</td>
