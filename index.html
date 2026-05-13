@@ -812,7 +812,8 @@
 
                 const totalIps = srvs.reduce((acc, s) => acc + parseInt(s.nbrIp || 0), 0);
                 const asnCounts = srvs.reduce((a,s) => { if(s.asn) a[s.asn] = (a[s.asn]||0)+1; return a; }, {});
-                const asnList = Object.entries(asnCounts).map(([asn, count]) => {
+                const sortedAsn = Object.entries(asnCounts).sort((a, b) => b[1] - a[1]);
+                const asnList = sortedAsn.map(([asn, count]) => {
                     const perc = srvs.length > 0 ? ((count / srvs.length) * 100).toFixed(0) : 0;
                     return `
                         <div style="margin-bottom: 8px;">
@@ -826,7 +827,8 @@
                 }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Provider data</div>';
 
                 const classCounts = srvs.reduce((a,s) => { if(s.class) a[s.class] = (a[s.class]||0)+1; return a; }, {});
-                const classList = Object.entries(classCounts).map(([cls, count]) => {
+                const sortedClasses = Object.entries(classCounts).sort((a, b) => b[1] - a[1]);
+                const classList = sortedClasses.map(([cls, count]) => {
                     const perc = srvs.length > 0 ? ((count / srvs.length) * 100).toFixed(0) : 0;
                     return `
                         <div style="margin-bottom: 8px;">
