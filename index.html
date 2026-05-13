@@ -454,32 +454,38 @@
         </div>
 
         <div id="domainBlacklistView" class="view" style="display:none; padding: 0 2rem;">
-            <div class="bl-header" style="margin-bottom: 2rem;">
-                <h2>Domain Blacklist</h2>
-                <p>Monitor your domain health and reputation status.</p>
+            <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2>Domain Blacklist</h2>
+                    <p>Track the health and reputation of your domains across teams.</p>
+                </div>
             </div>
             
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-primary" onclick="window.openDomainModal()" style="padding:10px 24px;"><i data-lucide="plus" size="16"></i> Add Domain</button>
-                    <button class="dns-action-btn" onclick="window.domainTracking = []; window.saveDomainData();" style="border-color:#ef4444; color:#ef4444;">Clear All</button>
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div class="bl-toggle">
+                    <button id="btnTrackDomain1" class="active" onclick="window.activeTrackTeam = 1; window.renderDomainTable(); document.querySelectorAll('[id^=btnTrackDomain]').forEach(b=>b.classList.remove('active')); this.classList.add('active');">Team 1</button>
+                    <button id="btnTrackDomain2" onclick="window.activeTrackTeam = 2; window.renderDomainTable(); document.querySelectorAll('[id^=btnTrackDomain]').forEach(b=>b.classList.remove('active')); this.classList.add('active');">Team 2</button>
                 </div>
+            </div>
+
+            <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px;">
+                <button class="bl-btn bl-btn-primary" onclick="window.openDomainModal()"><i data-lucide="plus"></i> Add Domains (Bulk)</button>
+                <button class="bl-btn bl-btn-success" onclick="window.domainTracking = []; window.saveDomainData();"><i data-lucide="trash-2"></i> Clear Manual List</button>
             </div>
 
             <div class="bl-table-container">
                 <table class="bl-table">
-                    <thead style="background:#0f172a;">
+                    <thead style="background:#1e293b; position: sticky; top:0; z-index:10;">
                         <tr>
                             <th>Domain</th>
                             <th>Owner</th>
-                            <th>Team</th>
-                            <th>Status</th>
+                            <th style="text-align: center;">Status</th>
                             <th>Notes</th>
-                            <th style="text-align:right;">Actions</th>
+                            <th style="text-align: right;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="domainTableBody">
-                        <tr><td colspan="5" style="text-align:center; padding:3rem; color:var(--text-secondary);">Initializing...</td></tr>
+                        <!-- Domains will be loaded here -->
                     </tbody>
                 </table>
             </div>
@@ -721,7 +727,7 @@
 
     <div class="modal-overlay" id="modalOverlay"><div class="modal"><h2>Project</h2><form id="projectForm" onsubmit="window.handleProjectSubmit(event)"><input type="hidden" id="projectId"><div class="form-group"><label>Owner</label><input type="text" id="ownerName" required></div><div class="form-group"><label>Project</label><input type="text" id="projectName" required></div><div class="form-group"><label>Link</label><input type="url" id="projectLink" required></div><div class="form-group"><label>User</label><input type="text" id="username" required></div><div class="form-group"><label>Pass</label><input type="password" id="password" required></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeProjectModal()">Cancel</button><button type="submit" class="btn-primary">Save</button></div></form></div></div>
     <div class="modal-overlay" id="userModalOverlay"><div class="modal"><h2>User</h2><form onsubmit="window.handleUserSubmit(event)"><div class="form-group"><label>User</label><input type="text" id="newUsername" required></div><div class="form-group"><label>Pass</label><input type="password" id="newUserPass" required></div><div class="form-group"><label>Access (Owners)</label><div id="ownersChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeUserModal()">Cancel</button><button type="submit" class="btn-primary">Create</button></div></form></div></div>
-    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId"><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div><div class="form-group"><label>IP(s) (One per line)</label><textarea id="sIp" required style="width:100%; height:38px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-family:monospace; resize:vertical; line-height:1.2;"></textarea></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Statut</label><input type="text" id="sStatus" value="Active"></div><div class="form-group"><label>Class</label><input type="text" id="sClass"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Owner</label><input type="text" id="sOwner" placeholder="Owner name..."></div><div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Date Entre</label><input type="text" id="sDate"></div><div class="form-group"><label>Notice Date</label><input type="text" id="sNoticeDate"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div><div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" value="0"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div></form></div></div>
+    <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId"><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div><div class="form-group"><label>IP(s) (One per line)</label><textarea id="sIp" style="width:100%; height:38px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-family:monospace; resize:vertical; line-height:1.2;"></textarea></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Domain(s) (One per line)</label><textarea id="sDomain" style="width:100%; height:38px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-family:monospace; resize:vertical; line-height:1.2;"></textarea></div><div class="form-group"><label>Statut</label><input type="text" id="sStatus" value="Active"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Class</label><input type="text" id="sClass"></div><div class="form-group"><label>Owner</label><input type="text" id="sOwner" placeholder="Owner name..."></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Date Entre</label><input type="text" id="sDate"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Notice Date</label><input type="text" id="sNoticeDate"></div><div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" value="0"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div></form></div></div>
     <div class="modal-overlay" id="projectImportModalOverlay"><div class="modal"><h2>Import Projects</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Format: Owner;Project;Link;User;Pass</p><div class="import-box" onclick="document.getElementById('projFileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="projFileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="projImportText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeProjectImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleProjectImport()">Start Import</button></div></div></div>
     <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2><div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Assign to Owner (Optional)</label><input type="text" id="importOwner" placeholder="Owner name..."></div><div class="import-box" onclick="document.getElementById('fileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="fileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div></div></div>
 
@@ -1208,9 +1214,25 @@
             alert('API Configurations updated!');
         };
         window.handleServerSubmit = function(e) {
-            e.preventDefault(); const id = document.getElementById('serverId').value || Date.now().toString();
-            const data = { id, name: document.getElementById('sName').value, ip: document.getElementById('sIp').value, status: document.getElementById('sStatus').value, class: document.getElementById('sClass').value, owner: document.getElementById('sOwner').value, date: document.getElementById('sDate').value, noticeDate: document.getElementById('sNoticeDate').value, asn: document.getElementById('sAsn').value, nbrIp: document.getElementById('sNbrIp').value, team: document.getElementById('sTeam').value };
-            const idx = window.servers.findIndex(s => s.id === id); if(idx > -1) window.servers[idx] = data; else window.servers.push(data);
+            e.preventDefault(); 
+            const id = document.getElementById('serverId').value || Date.now().toString();
+            const data = { 
+                id, 
+                name: document.getElementById('sName').value, 
+                ip: document.getElementById('sIp').value, 
+                domain: document.getElementById('sDomain').value,
+                status: document.getElementById('sStatus').value, 
+                class: document.getElementById('sClass').value, 
+                owner: document.getElementById('sOwner').value, 
+                date: document.getElementById('sDate').value, 
+                noticeDate: document.getElementById('sNoticeDate').value, 
+                asn: document.getElementById('sAsn').value, 
+                nbrIp: document.getElementById('sNbrIp').value, 
+                team: document.getElementById('sTeam').value 
+            };
+            const idx = window.servers.findIndex(s => s.id === id); 
+            if(idx > -1) window.servers[idx] = data; 
+            else window.servers.push(data);
             window.saveData(); window.closeServerModal();
         };
 
@@ -1385,7 +1407,7 @@
                 if (sortFilter === 'ip_desc') {
                     srvs.sort((a, b) => parseInt(b.nbrIp || 0) - parseInt(a.nbrIp || 0));
                 } else if (sortFilter === 'ip_asc') {
-                    srvs.sort((a, b) => parseInt(a.nbrIp || 0) - parseInt(b.nbrIp || 0));
+                    srvs.sort((a, b) => parseInt(a.nbrIp || 0) - parseInt(a.nbrIp || 0));
                 }
 
                 const totalIps = srvs.reduce((acc, s) => acc + parseInt(s.nbrIp || 0), 0);
@@ -1431,23 +1453,27 @@
                     </div>
                 `).join('') || '<div style="font-size:0.7rem; color:var(--text-secondary)">0 Deleted</div>';
 
-                const rows = srvs.map(s => {
-                    const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
-                    const ipDisplay = ips.length > 1 ? `
-                        <div class="ip-cell-container">
-                            ${ips[0]} 
-                            <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${ips.length-1} more</span>
-                            <div class="ip-popover">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                                    <span style="font-size:0.6rem; color:var(--text-secondary);">Server IPs</span>
-                                    <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                    const rows = srvs.map(s => {
+                        const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                        const ipDisplay = ips.length > 1 ? `
+                            <div class="ip-cell-container">
+                                ${ips[0]} 
+                                <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${ips.length-1} more</span>
+                                <div class="ip-popover">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                                        <span style="font-size:0.6rem; color:var(--text-secondary);">Server IPs</span>
+                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                                    </div>
+                                    ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
                                 </div>
-                                ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
                             </div>
-                        </div>
-                    ` : (ips[0] || '');
-                    return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`;
-                }).join('');
+                        ` : (ips[0] || '');
+                        
+                        const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                        const domainDisplay = domains.length > 1 ? `<span title="${domains.join(', ')}">${domains[0]} (+${domains.length-1})</span>` : (domains[0] || '-');
+
+                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`;
+                    }).join('');
 
                 // Render Deleted Servers for this team
                 let historyHtml = '';
@@ -1512,7 +1538,7 @@
                         </div>
                         <div class="server-table-container">
                             <table class="server-table">
-                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
+                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Domain</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
                                 <tbody>${rows}</tbody>
                             </table>
                         </div>
@@ -1596,9 +1622,10 @@
         window.editServer = function(id) {
             const s = window.servers.find(x => x.id === id);
             if(!s) return;
-            document.getElementById('serverId').value = s.id;
-            document.getElementById('sName').value = s.name;
-            document.getElementById('sIp').value = s.ip;
+            document.getElementById('serverId').value = s.id || '';
+            document.getElementById('sName').value = s.name || '';
+            document.getElementById('sIp').value = s.ip || '';
+            document.getElementById('sDomain').value = s.domain || '';
             document.getElementById('sStatus').value = s.status || 'Active';
             document.getElementById('sClass').value = s.class || '';
             document.getElementById('sOwner').value = s.owner || '';
@@ -2163,20 +2190,35 @@
             const tbody = document.getElementById('domainTableBody');
             if (!tbody) return;
 
-            if (window.domainTracking.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 4rem; color:var(--text-secondary);">No domains tracked. Add some domains to start monitoring.</td></tr>';
+            const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
+            const teamDomains = [];
+            
+            // Collect domains from servers
+            teamServers.forEach(s => {
+                const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                domains.forEach(d => teamDomains.push({ domain: d, owner: s.owner || '-', id: s.id, type: 'server' }));
+            });
+
+            // Add manual domains
+            window.domainTracking.forEach(d => {
+                if (parseInt(d.team) === window.activeTrackTeam) {
+                    teamDomains.push({ ...d, type: 'manual' });
+                }
+            });
+
+            if (teamDomains.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 4rem; color:var(--text-secondary);">No domains found for this team. Add domains in the Team view or use Bulk Add.</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = window.domainTracking.map(d => `
+            tbody.innerHTML = teamDomains.map(d => `
                 <tr>
                     <td style="font-weight:700; color:white;">${d.domain}</td>
-                    <td><span style="background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; font-size:0.7rem;">${d.owner || '-'}</span></td>
-                    <td><span style="color:#6366f1; font-weight:700;">Team ${d.team || '1'}</span></td>
-                    <td><span style="color:#10b981; font-weight:700;">CLEAN</span></td>
+                    <td><span style="background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; font-size:0.7rem;">${d.owner}</span></td>
+                    <td style="text-align:center;"><span style="color:#10b981; font-weight:700;">CLEAN</span></td>
                     <td style="color:var(--text-secondary); font-size:0.75rem;">${d.notes || '-'}</td>
                     <td style="text-align:right;">
-                        <button onclick="window.deleteDomain('${d.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i data-lucide="trash-2" size="14"></i></button>
+                        ${d.type === 'manual' ? `<button onclick="window.deleteDomain('${d.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i data-lucide="trash-2" size="14"></i></button>` : '<i data-lucide="link" size="12" style="color:var(--accent-color);" title="Linked to Server"></i>'}
                     </td>
                 </tr>
             `).join('');
