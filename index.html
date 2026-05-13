@@ -432,49 +432,76 @@
         </div>
 
         <div id="extractionView" class="view" style="display:none; padding: 0 2rem;">
-            <div class="bl-header" style="margin-bottom: 2rem;">
-                <h2>Smart Data Extraction</h2>
-                <p>Extract emails, passwords, or custom patterns from raw text logs.</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; border-bottom:1px solid #1f2937; padding-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:10px; color:#10b981;">
+                    <i data-lucide="mail" size="20"></i>
+                    <h2 style="font-size:1.1rem; text-transform:uppercase; letter-spacing:1px; font-weight:800;">Extraction</h2>
+                </div>
+                <div style="display:flex; background:#1e293b; border-radius:4px; overflow:hidden;">
+                    <button class="dns-action-btn" style="background:#2563eb; color:white; border:none; border-radius:0; padding:8px 16px;">Local Server</button>
+                    <button class="dns-action-btn" style="border:none; border-radius:0; padding:8px 16px;">Internal Proxies</button>
+                    <button class="dns-action-btn" style="border:none; border-radius:0; padding:8px 16px;">External Proxies</button>
+                </div>
             </div>
 
-            <div class="dns-layout" style="grid-template-columns: 1fr 1fr;">
-                <div class="dns-sidebar" style="width:100%;">
-                    <div class="dns-card">
-                        <div class="dns-input-header">
-                            <i data-lucide="file-text" size="14"></i>
-                            <span>Raw Data / Logs</span>
-                        </div>
-                        <textarea id="extractInput" class="dns-textarea" style="height:400px;" placeholder="Paste your raw logs or text here..."></textarea>
-                        
-                        <div style="margin-top:1.5rem;">
-                            <label style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase;">Extraction Format</label>
-                            <select id="extractFormat" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:12px; color:white; outline:none; margin-bottom:1rem;">
-                                <option value="email_pass">Email:Password</option>
-                                <option value="user_pass">User:Password</option>
-                                <option value="email_only">Emails Only</option>
-                                <option value="ip_only">IP Addresses Only</option>
-                            </select>
-                        </div>
-
-                        <button onclick="window.runExtraction()" class="btn-dns-start" style="background:linear-gradient(135deg, #a855f7, #9333ea);">
-                            <span>Run Extraction</span>
-                            <i data-lucide="scissors" size="16"></i>
-                        </button>
+            <div class="dns-card" style="padding:2rem;">
+                <!-- Top Row Fields -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 40px; gap:1rem; margin-bottom:1.5rem;">
+                    <div class="form-group">
+                        <input type="text" id="boxEmail" placeholder="Email" style="width:100%; background:#030712; border:1px solid #1f2937; padding:10px; border-radius:4px; color:#94a3b8;">
                     </div>
+                    <div class="form-group">
+                        <input type="password" id="boxPass" placeholder="Password" style="width:100%; background:#030712; border:1px solid #1f2937; padding:10px; border-radius:4px; color:#94a3b8;">
+                    </div>
+                    <div class="form-group">
+                        <select style="width:100%; background:#030712; border:1px solid #1f2937; padding:10px; border-radius:4px; color:#94a3b8;">
+                            <option>bigpond</option>
+                            <option>orange.fr</option>
+                            <option>wanadoo.fr</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select style="width:100%; background:#030712; border:1px solid #1f2937; padding:10px; border-radius:4px; color:#94a3b8;">
+                            <option>Trash</option>
+                            <option>Inbox</option>
+                            <option>Spam</option>
+                        </select>
+                    </div>
+                    <button style="background:white; border:1px solid #d1d5db; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#10b981;"><i data-lucide="check" size="16"></i></button>
                 </div>
 
-                <div class="dns-results-area">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h4 style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px;">Extracted Results</h4>
-                        <span id="extractCount" class="proj-count-badge">0 results</span>
+                <!-- Bottom Row Filters -->
+                <div style="display:grid; grid-template-columns: 200px 300px 1fr; gap:1rem; align-items:center;">
+                    <div style="display:flex; gap:8px;">
+                        <select style="flex:1; background:#030712; border:1px solid #1f2937; padding:10px; border-radius:4px; color:#94a3b8;">
+                            <option>All</option>
+                        </select>
+                        <button style="background:none; border:none; color:#94a3b8;"><i data-lucide="plus" size="18"></i></button>
                     </div>
+                    <div class="form-group">
+                        <input type="text" placeholder="Select a filter(s)" style="width:100%; background:#030712; border:1px solid #1f2937; padding:10px; border-radius:4px; color:#94a3b8;">
+                    </div>
+                    <div style="text-align:right; display:flex; justify-content:flex-end; gap:2px;">
+                        <button class="btn-dns-start" style="width:fit-content; margin-top:0; border-radius:4px 0 0 4px; padding:8px 24px; background:#2563eb;">Execute</button>
+                        <button class="btn-dns-start" style="width:40px; margin-top:0; border-radius:0 4px 4px 0; padding:0; background:#2563eb; display:flex; align-items:center; justify-content:center;"><i data-lucide="settings-2" size="16"></i></button>
+                    </div>
+                </div>
+            </div>
 
-                    <textarea id="extractOutput" class="dns-textarea" style="height:350px; background:rgba(0,0,0,0.5); border-color:rgba(168,85,247,0.3);" readonly></textarea>
-
-                    <div class="dns-actions">
-                        <button class="dns-action-btn" onclick="window.copyExtractResults()"><i data-lucide="copy" size="14"></i> Copy All</button>
-                        <button class="dns-action-btn" onclick="document.getElementById('extractInput').value=''; document.getElementById('extractOutput').value='';"><i data-lucide="trash-2" size="14"></i> Clear</button>
-                        <button class="dns-action-btn" onclick="window.downloadExtractResults()"><i data-lucide="download" size="14"></i> Download .txt</button>
+            <!-- Text Parser (Old functionality moved below) -->
+            <div style="margin-top:3rem; border-top:1px solid #1f2937; padding-top:2rem;">
+                <h3 style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; margin-bottom:1.5rem; letter-spacing:1px;">Bulk Text Parser</h3>
+                <div class="dns-layout" style="grid-template-columns: 1fr 1fr;">
+                    <div class="dns-card">
+                        <textarea id="extractInput" class="dns-textarea" style="height:200px;" placeholder="Paste raw logs here..."></textarea>
+                        <button onclick="window.runExtraction()" class="btn-dns-start" style="margin-top:1rem;">Run Parser</button>
+                    </div>
+                    <div class="dns-results-area" style="gap:1rem;">
+                        <textarea id="extractOutput" class="dns-textarea" style="height:150px;" readonly></textarea>
+                        <div class="dns-actions">
+                            <button class="dns-action-btn" onclick="window.copyExtractResults()">Copy</button>
+                            <button class="dns-action-btn" onclick="window.downloadExtractResults()">Download</button>
+                        </div>
                     </div>
                 </div>
             </div>
