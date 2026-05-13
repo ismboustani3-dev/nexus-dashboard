@@ -89,17 +89,16 @@
         <header><div class="search-bar"><i data-lucide="search" size="18" color="#94a3b8"></i><input type="text" id="searchInput" placeholder="Search..."></div><div class="user-profile"><div class="avatar" id="headerAvatar">A</div><div class="user-info"><p style="font-weight:600;" id="headerName">Admin</p><p style="font-size: 0.7rem; color: var(--text-secondary);" id="userRole">Administrator</p></div></div></header>
 
         <div id="dashboardView" class="view">
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div>
-                <div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div>
-                <div class="stat-card" style="border-left: 4px solid var(--accent-color);"><div class="stat-info"><h3>Total Servers</h3><p id="dashTotalServers">0</p></div></div>
-                <div class="stat-card" style="border-left: 4px solid #f59e0b;"><div class="stat-info"><h3>Global IPs</h3><p id="dashTotalIps">0</p></div></div>
+            <div style="display:grid; grid-template-columns: 1fr 400px; gap:1.5rem; margin-bottom:1.5rem; align-items: start;">
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin:0; height: 100%;">
+                    <div class="stat-card"><div class="stat-info"><h3>Projects</h3><p id="totalProjects">0</p></div></div>
+                    <div class="stat-card"><div class="stat-info"><h3>Users</h3><p id="totalUsers">0</p></div></div>
+                    <div class="stat-card" style="border-left: 4px solid var(--accent-color);"><div class="stat-info"><h3>Total Servers</h3><p id="dashTotalServers">0</p></div></div>
+                    <div class="stat-card" style="border-left: 4px solid #f59e0b;"><div class="stat-info"><h3>Global IPs</h3><p id="dashTotalIps">0</p></div></div>
+                </div>
+                <div id="globalClassDist"></div>
             </div>
             <div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div>
-            <div class="card-container" style="margin-top:2rem;">
-                <h2>Global Class Distribution</h2>
-                <div id="globalClassDist" style="margin-top:1.5rem;"></div>
-            </div>
         </div>
         <div id="projectsView" class="view" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
