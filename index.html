@@ -1503,8 +1503,13 @@
                             </div>
                         ` : (domains[0] || '-');
 
-                        const rdnsStatus = (window.rdnsData || {})[s.id] || { status: 'PENDING', color: '#6b7280' };
-                        const rdnsDisplay = `<span style="color:${rdnsStatus.color}; font-weight:bold; font-size:0.7rem; border:1px solid ${rdnsStatus.color}44; padding:2px 6px; border-radius:4px;">${rdnsStatus.status}</span>`;
+                        const rdnsInfo = (window.rdnsData || {})[s.id] || { status: 'PENDING', color: '#6b7280' };
+                        const rdnsDisplay = `
+                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.7rem; border:1px solid ${rdnsInfo.color}44; padding:2px 6px; border-radius:4px; display:inline-block; text-align:center;">${rdnsInfo.status}</span>
+                                ${rdnsInfo.date ? `<span style="font-size:0.55rem; color:var(--text-secondary); text-align:center;">${rdnsInfo.date}</span>` : ''}
+                            </div>
+                        `;
 
                         return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td>${rdnsDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
                     }).join('');
@@ -2262,35 +2267,36 @@
             if(total === 0) return alert('No servers to audit.');
 
             const checkServer = async (s) => {
-                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
-                const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                const ips = (s.ip || '').split(/[,\n;]+/).map(ip => ip.trim()).filter(ip => ip);
+                const domains = (s.domain || '').split(/[,\n;]+/).map(d => d.trim()).filter(d => d);
+                const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 
                 if(ips.length === 0 || domains.length === 0) {
-                    window.rdnsData[s.id] = { status: 'NO DATA', color: '#6b7280' };
+                    window.rdnsData[s.id] = { status: 'NO DATA', color: '#6b7280', date: now };
                     return;
                 }
 
                 try {
-                    // Check first domain against first IP
                     const res = await fetch(`https://dns.google/resolve?name=${domains[0]}&type=A`);
                     const json = await res.json();
                     const answers = json.Answer || [];
                     const matches = answers.some(a => a.data === ips[0]);
 
-                    if(matches) {
-                        window.rdnsData[s.id] = { status: 'RDNS OK', color: '#10b981' };
-                    } else {
-                        window.rdnsData[s.id] = { status: 'NOT ACTIVE', color: '#ef4444' };
-                    }
+                    window.rdnsData[s.id] = { 
+                        status: matches ? 'RDNS OK' : 'NOT ACTIVE', 
+                        color: matches ? '#10b981' : '#ef4444',
+                        date: now
+                    };
                 } catch (e) {
-                    window.rdnsData[s.id] = { status: 'ERROR', color: '#f59e0b' };
+                    window.rdnsData[s.id] = { status: 'ERROR', color: '#f59e0b', date: now };
                 }
+                window.refreshUI(); // Real-time update
             };
 
             const runAll = async () => {
                 const btn = document.querySelector('button[onclick="window.runRdnsAudit()"]');
                 const oldHtml = btn.innerHTML;
-                btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Auditing...';
+                btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Scanning...';
                 btn.disabled = true;
 
                 for(let s of srvs) {
@@ -2300,10 +2306,9 @@
 
                 btn.innerHTML = oldHtml;
                 btn.disabled = false;
-                window.refreshUI();
-                // Save results to Firebase
+                // Save all results to Firebase once at the end
                 db.ref('nexus/rdnsData').set(window.rdnsData);
-                alert(`RDNS Audit Complete for ${count} servers!`);
+                if (window.lucide) lucide.createIcons();
             };
 
             runAll();
