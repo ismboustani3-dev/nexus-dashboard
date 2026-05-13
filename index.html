@@ -603,7 +603,8 @@
                             <th>IP</th>
                             <th>Status</th>
                             <th>ISP</th>
-                            <th>Provider</th>
+                            <th>Organization</th>
+                            <th>ASN</th>
                             <th>Country</th>
                             <th>Region</th>
                             <th>City</th>
@@ -1860,8 +1861,9 @@
                 const res = { 
                     ip, 
                     status: "Success", 
-                    asn: data.connection?.asn || "N/A",
-                    provider: data.connection?.isp || "Unknown", 
+                    isp: data.connection?.isp || "N/A",
+                    org: data.connection?.org || "N/A",
+                    asn: data.connection?.asn ? `AS${data.connection.asn}` : "N/A",
                     country: data.country || "", 
                     region: data.region || "", 
                     city: data.city || "" 
@@ -1875,8 +1877,9 @@
                 const res = { 
                     ip, 
                     status: "Success", 
+                    isp: data.org || "N/A",
+                    org: data.org || "N/A",
                     asn: data.asn || "N/A",
-                    provider: data.org || "Unknown", 
                     country: data.country_name || "", 
                     region: data.region || "", 
                     city: data.city || "" 
@@ -1887,11 +1890,15 @@
             // API 3: ipinfo.io
             data = await window.fetchIpAPI(`https://ipinfo.io/${ip}/json`);
             if (data && !data.error) {
+                // ipinfo 'org' is usually "ASXXXXX Name"
+                const orgStr = data.org || "N/A";
+                const asnMatch = orgStr.match(/AS\d+/);
                 const res = { 
                     ip, 
                     status: "Success", 
-                    asn: data.asn || "N/A",
-                    provider: data.org || "Unknown", 
+                    isp: orgStr.replace(/AS\d+\s*/, '') || "N/A",
+                    org: orgStr.replace(/AS\d+\s*/, '') || "N/A",
+                    asn: asnMatch ? asnMatch[0] : "N/A",
                     country: data.country || "", 
                     region: data.region || "", 
                     city: data.city || "" 
@@ -1905,8 +1912,9 @@
                 const res = { 
                     ip, 
                     status: "Success", 
+                    isp: data.asName || "N/A",
+                    org: data.asName || "N/A",
                     asn: data.asNumber ? `AS${data.asNumber}` : "N/A",
-                    provider: data.asName || "Unknown", 
                     country: data.countryName || "", 
                     region: data.regionName || "", 
                     city: data.cityName || "" 
@@ -1914,7 +1922,7 @@
                 window.ipCache[ip] = res; return res;
             }
 
-            return { ip, status: "Failed", asn: "N/A", provider: "Fetch Error (All APIs failed)", country: "", region: "", city: "" };
+            return { ip, status: "Failed", isp: "N/A", org: "N/A", asn: "N/A", country: "", region: "", city: "" };
         }
 
         window.runIpLookup = async function() {
@@ -1964,8 +1972,9 @@
                         row.innerHTML = `
                             <td style="font-weight:700; color:white;">${data.ip}</td>
                             <td><span style="color:#10b981; font-weight:700;">Success</span></td>
+                            <td style="color:#94a3b8;">${data.isp}</td>
+                            <td style="color:#94a3b8;">${data.org}</td>
                             <td style="color:#94a3b8;">${data.asn}</td>
-                            <td style="color:#94a3b8;">${data.provider}</td>
                             <td style="color:#94a3b8;">${data.country}</td>
                             <td style="color:#94a3b8;">${data.region}</td>
                             <td style="color:#94a3b8;">${data.city}</td>
