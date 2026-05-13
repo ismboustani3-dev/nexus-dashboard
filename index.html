@@ -70,6 +70,16 @@
         .bl-status.clean { background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
         .bl-status.listed { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
         .bl-status.error { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+
+        /* IP Popover */
+        .ip-cell-container { position: relative; }
+        .ip-badge { font-size: 0.65rem; color: var(--text-secondary); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; margin-left: 4px; cursor: pointer; transition: 0.2s; }
+        .ip-badge:hover { background: var(--accent-color); color: black; }
+        .ip-popover { display: none; position: absolute; top: 100%; left: 0; background: #1e293b; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); min-width: 160px; margin-top: 5px; }
+        .ip-popover.active { display: block; }
+        .ip-popover-item { font-family: monospace; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .ip-popover-item:last-child { border-bottom: none; }
+        .ip-popover-item:hover { background: rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -585,7 +595,15 @@
                 
                 return `<div class="team-column"><div class="team-header team-${tId}" style="justify-content:space-between;"><span>${tName}</span><button onclick="window.editTeamName('team${tId}')">Edit</button></div><div class="team-analytics"><div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div><div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div><div class="analytics-card" style="grid-column: span 2;"><h4>Providers Distribution</h4><div style="margin-top:10px;">${asnList}</div></div></div><div class="server-table-container"><table class="server-table"><thead><tr><th>SERVERS</th><th>Main IP</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead><tbody>${srvs.map(s => {
                     const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
-                    const ipDisplay = ips.length > 1 ? `${ips[0]} <span style="font-size:0.65rem; color:var(--text-secondary); background:rgba(255,255,255,0.1); padding:2px 4px; border-radius:4px; margin-left:4px;">+${ips.length-1} more</span>` : (ips[0] || '');
+                    const ipDisplay = ips.length > 1 ? `
+                        <div class="ip-cell-container">
+                            ${ips[0]} 
+                            <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${ips.length-1} more</span>
+                            <div class="ip-popover">
+                                ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
+                            </div>
+                        </div>
+                    ` : (ips[0] || '');
                     return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.deleteServer('${s.id}')">Del</button></td></tr>`;
                 }).join('')}</tbody></table></div></div>`;
             };
@@ -776,7 +794,13 @@
             a.click(); window.URL.revokeObjectURL(url);
         };
 
-        window.onload = window.loadData;
+        window.onload = function() {
+            window.loadData();
+            // Close IP popovers when clicking elsewhere
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.ip-popover.active').forEach(p => p.classList.remove('active'));
+            });
+        };
     </script>
 </body>
 </html>
