@@ -1809,6 +1809,45 @@
             a.click();
         };
 
+        const ipCache = {};
+
+        async function fetchIpAPI(url) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 5000);
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeout);
+                return await response.json();
+            } catch (err) { return null; }
+        }
+
+        async function getIPData(ip) {
+            if (ipCache[ip]) return ipCache[ip];
+
+            // API 1: ipwho.is
+            let data = await fetchIpAPI(`https://ipwho.is/${ip}`);
+            if (data && data.success !== false) {
+                const res = { ip, status: "Success", provider: data.connection?.isp || "Unknown", country: data.country || "", region: data.region || "", city: data.city || "" };
+                ipCache[ip] = res; return res;
+            }
+
+            // API 2: ipapi.co
+            data = await fetchIpAPI(`https://ipapi.co/${ip}/json/`);
+            if (data && !data.error) {
+                const res = { ip, status: "Success", provider: data.org || "Unknown", country: data.country_name || "", region: data.region || "", city: data.city || "" };
+                ipCache[ip] = res; return res;
+            }
+
+            // API 3: ipinfo.io (No token free limit)
+            data = await fetchIpAPI(`https://ipinfo.io/${ip}/json`);
+            if (data && !data.error) {
+                const res = { ip, status: "Success", provider: data.org || "Unknown", country: data.country || "", region: data.region || "", city: data.city || "" };
+                ipCache[ip] = res; return res;
+            }
+
+            return { ip, status: "Failed", provider: "Fetch Error", country: "", region: "", city: "" };
+        }
+
         window.runIpLookup = async function() {
             const raw = document.getElementById('ipBulkInput').value.trim();
             if(!raw) return alert("Please enter at least one IP.");
@@ -1826,47 +1865,54 @@
             statsCard.style.display = 'block';
             body.innerHTML = '';
             totalEl.textContent = ips.length;
-            let success = 0; let failed = 0;
+            
+            let success = 0; let failed = 0; let processed = 0;
             const providers = {}; const regions = {};
 
-            for(let i=0; i < ips.length; i++) {
-                try {
-                    const res = await fetch(`https://freeipapi.com/api/json/${ips[i]}`);
-                    const data = await res.json();
-                    
-                    const row = document.createElement('tr');
-                    // freeipapi doesn't have a 'success' field in the same way, but it returns data
-                    if(data.ipAddress) {
+            // Initial UI: Show all as checking
+            ips.forEach(ip => {
+                const row = document.createElement('tr');
+                row.id = `ip-row-${ip.replaceAll('.', '-')}`;
+                row.innerHTML = `<td>${ip}</td><td style="color:#6366f1;">Checking...</td><td colspan="4"></td>`;
+                body.appendChild(row);
+            });
+
+            // Process in batches
+            const batchSize = 30;
+            for(let i=0; i < ips.length; i += batchSize) {
+                const batch = ips.slice(i, i + batchSize);
+                const results = await Promise.all(batch.map(ip => getIPData(ip)));
+
+                results.forEach(data => {
+                    const row = document.getElementById(`ip-row-${data.ip.replaceAll('.', '-')}`);
+                    if(!row) return;
+
+                    processed++;
+                    if(data.status === 'Success') {
                         success++;
-                        const providerName = data.asName || 'Unknown ISP';
-                        providers[providerName] = (providers[providerName]||0)+1;
-                        regions[data.regionName] = (regions[data.regionName]||0)+1;
+                        providers[data.provider] = (providers[data.provider]||0)+1;
+                        if(data.region) regions[data.region] = (regions[data.region]||0)+1;
                         row.innerHTML = `
-                            <td style="font-weight:700; color:white;">${data.ipAddress}</td>
+                            <td style="font-weight:700; color:white;">${data.ip}</td>
                             <td><span style="color:#10b981; font-weight:700;">Success</span></td>
-                            <td style="color:#94a3b8;">${providerName}</td>
-                            <td style="color:#94a3b8;">${data.countryName}</td>
-                            <td style="color:#94a3b8;">${data.regionName}</td>
-                            <td style="color:#94a3b8;">${data.cityName}</td>
+                            <td style="color:#94a3b8;">${data.provider}</td>
+                            <td style="color:#94a3b8;">${data.country}</td>
+                            <td style="color:#94a3b8;">${data.region}</td>
+                            <td style="color:#94a3b8;">${data.city}</td>
                         `;
                     } else {
                         failed++;
-                        row.innerHTML = `<td>${ips[i]}</td><td><span style="color:#ef4444;">Failed</span></td><td colspan="4">Invalid IP data</td>`;
+                        row.innerHTML = `<td>${data.ip}</td><td><span style="color:#ef4444;">Failed</span></td><td colspan="4">${data.provider}</td>`;
                     }
-                    body.appendChild(row);
-                } catch (e) { 
-                    failed++;
-                    body.innerHTML += `<tr><td>${ips[i]}</td><td><span style="color:#ef4444;">Error</span></td><td colspan="4">CORS/Network error</td></tr>`;
-                }
 
-                successEl.textContent = success;
-                failedEl.textContent = failed;
-                const perc = Math.round(((i + 1) / ips.length) * 100);
-                progress.style.width = `${perc}%`;
+                    successEl.textContent = success;
+                    failedEl.textContent = failed;
+                    progress.style.width = `${(processed / ips.length) * 100}%`;
 
-                // Update Badges
-                provBadges.innerHTML = Object.entries(providers).map(([k,v]) => `<span style="background:#030712; color:white; padding:4px 12px; border-radius:12px; font-size:0.65rem; font-weight:700;">${k}: ${v}</span>`).join('');
-                regBadges.innerHTML = Object.entries(regions).map(([k,v]) => `<span style="background:#030712; color:white; padding:4px 12px; border-radius:12px; font-size:0.65rem; font-weight:700;">${k}: ${v}</span>`).join('');
+                    // Update Badges
+                    provBadges.innerHTML = Object.entries(providers).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:4px 12px; border-radius:12px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937;">${k}: ${v}</span>`).join('');
+                    regBadges.innerHTML = Object.entries(regions).map(([k,v]) => `<span class="badge" style="background:#030712; color:white; padding:4px 12px; border-radius:12px; font-size:0.65rem; font-weight:700; border:1px solid #1f2937;">${k}: ${v}</span>`).join('');
+                });
             }
         };
 
