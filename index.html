@@ -786,49 +786,36 @@
             loader.innerHTML = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;justify-content:center;align-items:center;color:#00f2fe;font-family:\'Outfit\';font-size:1.5rem;flex-direction:column;gap:1rem;"><div>Connecting to Firebase Cloud...</div><div style="width:50px;height:50px;border:4px solid rgba(0,242,254,0.2);border-top:4px solid #00f2fe;border-radius:50%;animation:spin 1s linear infinite;"></div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></div>';
             document.body.appendChild(loader);
 
-            // Fetch once
-            db.ref('nexus').once('value').then((snapshot) => {
-                let data = snapshot.val();
-                
-                // MIGRATION LOGIC: If Firebase is empty, check localStorage
-                if (!data) {
-                    const localProjects = JSON.parse(localStorage.getItem('nexus_projects'));
-                    const localServers = JSON.parse(localStorage.getItem('nexus_servers'));
-                    if ((localProjects && localProjects.length > 0) || (localServers && localServers.length > 0)) {
-                        console.log("Migrating local data to Firebase...");
-                        data = {
-                            projects: localProjects || [],
-                            servers: localServers || [],
-                            teams: JSON.parse(localStorage.getItem('nexus_teams')) || { team1: 'Team 1', team2: 'Team 2' },
-                            settings: JSON.parse(localStorage.getItem('nexus_settings')) || { adminName: 'Admin', adminPass: 'admin', users: [] }
-            db.ref('nexus').once('value').then(snap => {
+            db.ref('nexus').once('value').then((snap) => {
                 const data = snap.val() || {};
                 window.projects = data.projects || [];
                 window.servers = data.servers || [];
                 window.teamNames = data.teams || { team1: 'Team 1', team2: 'Team 2' };
-                window.settings = data.settings || window.settings;
+                window.settings = data.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                 window.trackingData = data.tracking || {};
                 window.rdnsData = data.rdnsData || {};
                 window.deletionHistory = data.history || [];
-                window.currentUser.name = window.settings.adminName;
                 
+                window.currentUser.name = window.settings.adminName;
                 document.getElementById('setAdminName').value = window.settings.adminName;
                 document.getElementById('setHetrixKey').value = window.settings.hetrixKey || '';
                 document.getElementById('setSpamhausToken').value = window.settings.spamhausToken || '';
 
                 const lEl = document.getElementById('fbLoader');
                 if(lEl) lEl.remove();
+                
                 window.refreshUI();
                 if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
                 
-                // Set up real-time listener for ongoing updates
-                db.ref('nexus').on('value', (snap) => {
-                    const rData = snap.val() || {};
+                // Set up real-time listener
+                db.ref('nexus').on('value', (snapshot) => {
+                    const rData = snapshot.val() || {};
                     window.projects = rData.projects || [];
                     window.servers = rData.servers || [];
                     window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
                     window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                     window.deletionHistory = rData.history || [];
+                    window.rdnsData = rData.rdnsData || {};
                     
                     const newTrackingStr = JSON.stringify(rData.tracking || {});
                     if (JSON.stringify(window.trackingData) !== newTrackingStr) {
@@ -838,10 +825,9 @@
                     window.refreshUI();
                 });
                 
-                // Initialize Background Scheduler
                 window.startBackgroundScheduler();
             }).catch(err => {
-                alert("Firebase connection error: " + err.message);
+                console.error("Firebase error:", err);
                 const lEl = document.getElementById('fbLoader');
                 if(lEl) lEl.remove();
                 window.refreshUI();
@@ -1522,7 +1508,6 @@
 
                         return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td>${rdnsDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
                     }).join('');
-        }).join('');
 
                 // Render Deleted Servers for this team
                 let historyHtml = '';
