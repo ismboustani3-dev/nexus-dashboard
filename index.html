@@ -2383,6 +2383,7 @@
             navigator.clipboard.writeText(text);
             alert('Report copied to clipboard!');
         };
+        window.renderDomainTable = function() {
             const tbody = document.getElementById('domainTableBody');
             if (!tbody) return;
 
