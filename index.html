@@ -1912,19 +1912,25 @@
 
         // Remarques Professional Multi-Note Logic
         window.activeNoteId = null;
-        window.remarques = [];
+        if(!window.remarques) window.remarques = [];
 
         window.addNewNote = function() {
-            const newNote = {
-                id: 'note_' + Date.now(),
-                title: 'New Note',
-                content: '',
-                updated: new Date().toISOString(),
-                author: window.currentUser.name || 'Admin'
-            };
-            window.remarques.unshift(newNote);
-            window.selectNote(newNote.id);
-            window.renderNoteList();
+            try {
+                const authorName = (window.currentUser && window.currentUser.name) ? window.currentUser.name : 'Admin';
+                const newNote = {
+                    id: 'note_' + Date.now(),
+                    title: 'New Note',
+                    content: '',
+                    updated: new Date().toISOString(),
+                    author: authorName
+                };
+                if(!Array.isArray(window.remarques)) window.remarques = [];
+                window.remarques.unshift(newNote);
+                window.selectNote(newNote.id);
+                window.renderNoteList();
+            } catch (err) {
+                console.error("Error creating note:", err);
+            }
         };
 
         window.selectNote = function(id) {
