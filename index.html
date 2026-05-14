@@ -249,7 +249,10 @@
                         <option value="none">Default</option>
                         <option value="ip_desc">Max IP (High to Low)</option>
                         <option value="ip_asc">Min IP (Low to High)</option>
-                    </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: auto; width: 300px;">
+                    <i data-lucide="search" size="18" style="color:var(--accent-color);"></i>
+                    <input type="text" id="teamSearchInput" placeholder="Search Server, IP, Provider..." oninput="window.refreshUI()" style="width:100%; padding:0.4rem 0.8rem; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:white; font-size:0.8rem;">
                 </div>
             </div>
 
@@ -1416,8 +1419,28 @@
             const currentVal = filterEl.value;
             filterEl.innerHTML = '<option value="all">All Owners</option>' + owners.map(o => `<option value="${o}" ${o === currentVal ? 'selected' : ''}>${o}</option>`).join('');
 
-            let filteredServers = window.servers;
-            if(ownerFilter !== 'all') filteredServers = window.servers.filter(s => s.owner === ownerFilter);
+            const searchTerm = (document.getElementById('teamSearchInput')?.value || '').toLowerCase().trim();
+
+            let filteredServers = window.servers.filter(s => {
+                const matchesOwner = ownerFilter === 'all' || s.owner === ownerFilter;
+                
+                let matchesSearch = true;
+                if (searchTerm) {
+                    const name = (s.name || '').toLowerCase();
+                    const ip = (s.ip || '').toLowerCase();
+                    const domain = (s.domain || '').toLowerCase();
+                    const provider = (s.owner || '').toLowerCase();
+                    const asn = (s.asn || '').toLowerCase();
+                    
+                    matchesSearch = name.includes(searchTerm) || 
+                                    ip.includes(searchTerm) || 
+                                    domain.includes(searchTerm) || 
+                                    provider.includes(searchTerm) || 
+                                    asn.includes(searchTerm);
+                }
+                
+                return matchesOwner && matchesSearch;
+            });
 
             const teamFilter = document.getElementById('teamViewFilter').value;
             const sortFilter = document.getElementById('teamSortFilter').value;
