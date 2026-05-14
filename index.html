@@ -214,6 +214,15 @@
             <div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div>
         </div>
         <div id="projectsView" class="view" style="display:none;">
+            <!-- Data Recovery Utility -->
+            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:1.5rem; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 style="color:#ef4444; margin:0; font-size:1rem;">⚠️ Database Recovery Utility</h3>
+                    <p style="color:rgba(255,255,255,0.6); margin:5px 0 0 0; font-size:0.8rem;">If your Firebase data was lost, we can try to recover it from your browser's local storage.</p>
+                </div>
+                <button class="btn-primary" onclick="window.tryLocalRecovery()" style="background:#ef4444; border:none; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">Recover from Browser</button>
+            </div>
+
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <h1 style="font-family: 'Outfit';">Project Management</h1>
                 <div style="display:flex; gap:1rem;">
@@ -874,6 +883,31 @@
             });
         };
 
+        window.tryLocalRecovery = function() {
+            try {
+                const lp = localStorage.getItem('nexus_projects');
+                const ls = localStorage.getItem('nexus_servers');
+                const lt = localStorage.getItem('nexus_teams');
+                
+                if(!lp && !ls) {
+                    alert("No local data found in this browser. Please try on the computer where you last saw the projects.");
+                    return;
+                }
+                
+                if(confirm("Found some local data! Should we restore it and sync to Firebase? This will overwrite empty data.")) {
+                    if(lp) window.projects = JSON.parse(lp);
+                    if(ls) window.servers = JSON.parse(ls);
+                    if(lt) window.teamNames = JSON.parse(lt);
+                    
+                    window.saveData();
+                    window.refreshUI();
+                    alert("Recovery successful! Data synced back to Firebase.");
+                }
+            } catch(e) {
+                alert("Recovery error: " + e.message);
+            }
+        };
+
         window.loadData = function() {
             const loader = document.createElement('div');
             loader.id = 'fbLoader';
@@ -923,10 +957,7 @@
                     window.remarques = rData.remarques || [];
                     
                     window.refreshUI();
-                    updateMonitor();
-                });
-                    
-                    if(window.activeNoteId) {
+                                if(window.activeNoteId) {
                         const note = window.remarques.find(n => n.id === window.activeNoteId);
                         if(note) {
                             const titleEl = document.getElementById('activeNoteTitle');
