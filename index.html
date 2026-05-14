@@ -448,6 +448,20 @@
                     <!-- Stats will be injected here -->
                 </div>
             </div>
+
+            <!-- New Bulk Filter Tools for Blacklist -->
+            <div style="background:rgba(0, 242, 254, 0.02); border:1px solid rgba(0, 242, 254, 0.1); border-radius:12px; padding:1.2rem; margin-bottom:1.5rem;">
+                <h4 style="font-size:0.7rem; color:var(--accent-color); text-transform:uppercase; margin-bottom:0.8rem; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="filter" size="14"></i> Bulk IP Filter
+                </h4>
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <textarea id="bulkIpFilterInput" placeholder="Paste IPs here (one per line) to filter the table..." style="flex:1; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-size:0.8rem; font-family:monospace; min-height:60px; resize:vertical; outline:none;"></textarea>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button class="btn-primary" onclick="window.applyBulkIpFilter()" style="padding:10px 20px; white-space:nowrap;">Apply Filter</button>
+                        <button class="btn-secondary" onclick="document.getElementById('bulkIpFilterInput').value=''; window.renderTrackingTable();" style="padding:10px 20px; white-space:nowrap;">Clear</button>
+                    </div>
+                </div>
+            </div>
             
             <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px;">
                 <button class="bl-btn bl-btn-primary" onclick="window.saveData()"><i data-lucide="save"></i> Save Changes</button>
@@ -2037,7 +2051,29 @@
             }
 
             tbody.innerHTML = html;
+            
+            // Re-apply Bulk Filter if active
+            const filterVal = document.getElementById('bulkIpFilterInput')?.value.trim();
+            if(filterVal) {
+                const allowedIps = filterVal.split(/\r?\n/).map(ip => ip.trim()).filter(ip => ip);
+                if(allowedIps.length > 0) {
+                    const rows = tbody.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        const rowIp = row.cells[1].innerText.trim();
+                        row.style.display = allowedIps.includes(rowIp) ? '' : 'none';
+                    });
+                }
+            }
+            
             if(window.lucide) lucide.createIcons();
+        };
+
+        window.applyBulkIpFilter = function() {
+            window.renderTrackingTable();
+            const filterCount = document.getElementById('bulkIpFilterInput').value.split(/\r?\n/).filter(x => x.trim()).length;
+            if(filterCount > 0) {
+                console.log(`Bulk filter applied: ${filterCount} IPs`);
+            }
         };
 
         window.exportTrackingCSV = function() {
