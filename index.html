@@ -1507,12 +1507,11 @@
                         const rdnsInfo = (window.rdnsData || {})[s.id] || { status: 'PENDING', color: '#6b7280' };
                         const isScanning = rdnsInfo.status === 'SCANNING...';
                         const rdnsDisplay = `
-                            <div style="display:flex; flex-direction:column; gap:4px; min-width:110px; align-items:center;">
+                            <div style="display:flex; flex-direction:column; gap:4px; min-width:110px; align-items:center; cursor:pointer;" onclick="window.showServerRdnsDetails('${s.id}')">
                                 <div style="display:flex; align-items:center; gap:4px;">
-                                    <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.65rem; border:1px solid ${rdnsInfo.color}44; padding:1px 4px; border-radius:3px; cursor:pointer; ${isScanning ? 'opacity:0.6;' : ''}" 
-                                          onclick="window.runSingleRdnsAudit('${s.id}', this)" 
-                                          title="Click to re-scan this server">${rdnsInfo.status}</span>
-                                    ${rdnsInfo.ptr && rdnsInfo.ptr !== 'No PTR Found' ? `<i data-lucide="info" size="10" title="PTR: ${rdnsInfo.ptr}" style="color:var(--accent-color); cursor:help;"></i>` : ''}
+                                    <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.65rem; border:1px solid ${rdnsInfo.color}44; padding:1px 4px; border-radius:3px; ${isScanning ? 'opacity:0.6;' : ''}" 
+                                          title="Click for details">${rdnsInfo.status}</span>
+                                    <i data-lucide="external-link" size="10" style="color:var(--text-secondary); opacity:0.5;"></i>
                                 </div>
                                 ${rdnsInfo.ptr && rdnsInfo.ptr !== 'No PTR Found' && !isScanning ? `<div style="font-size:0.55rem; color:#94a3b8; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;" title="${rdnsInfo.ptr}">${rdnsInfo.ptr}</div>` : ''}
                                 ${rdnsInfo.date && !isScanning ? `<div style="font-size:0.5rem; color:#4b5563; text-align:center;">${rdnsInfo.date}</div>` : ''}
@@ -2263,13 +2262,81 @@
             }
         };
 
-        window.runSingleRdnsAudit = async function(id, el) {
+        window.showServerRdnsDetails = async function(id) {
             const s = window.servers.find(x => x.id === id);
             if(!s) return;
-            window.rdnsData[id] = { status: 'SCANNING...', color: '#6366f1', ptr: 'Checking...', date: '' };
-            window.refreshUI();
+            
+            const modal = document.getElementById('rdnsDetailModal');
+            const title = document.getElementById('rdnsDetailTitle');
+            const body = document.getElementById('rdnsDetailBody');
+            
+            title.textContent = `Audit Details: ${s.name}`;
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;"><i data-lucide="loader" class="spin"></i> Loading DNS Records...</td></tr>';
+            modal.style.display = 'flex';
+            if(window.lucide) lucide.createIcons();
+
+            const ips = (s.ip || '').split(/[,\n;]+/).map(ip => ip.trim()).filter(ip => ip);
+            const domains = (s.domain || '').split(/[,\n;]+/).map(d => d.trim()).filter(d => d);
+            
+            let html = '';
+            
+            // Section 1: IP -> PTR
+            html += `<tr><td colspan="4" style="background:rgba(255,255,255,0.03); font-weight:800; font-size:0.65rem; color:var(--accent-color); padding:8px;">REVERSE DNS (IP -> PTR)</td></tr>`;
+            for(let ip of ips) {
+                const revIp = ip.split('.').reverse().join('.') + '.in-addr.arpa';
+                let ptr = 'No PTR Found';
+                let color = '#ef4444';
+                try {
+                    const res = await fetch(`https://dns.google/resolve?name=${revIp}&type=PTR`);
+                    const json = await res.json();
+                    const records = (json.Answer || []).filter(a => a.type === 12);
+                    if(records.length > 0) {
+                        ptr = records[0].data.replace(/\.$/, '');
+                        color = domains.some(d => ptr.toLowerCase() === d.toLowerCase() || ptr.toLowerCase().endsWith('.' + d.toLowerCase())) ? '#10b981' : '#f59e0b';
+                    }
+                } catch(e) {}
+                html += `<tr><td>${ip}</td><td>PTR</td><td style="color:${color}; font-weight:700;">${ptr}</td><td>${color === '#10b981' ? 'OK' : 'MISMATCH'}</td></tr>`;
+            }
+
+            // Section 2: Domain -> A
+            html += `<tr><td colspan="4" style="background:rgba(255,255,255,0.03); font-weight:800; font-size:0.65rem; color:var(--accent-color); padding:8px;">FORWARD DNS (DOMAIN -> A)</td></tr>`;
+            for(let d of domains) {
+                let resolvedIp = 'Not Resolved';
+                let color = '#ef4444';
+                try {
+                    const res = await fetch(`https://dns.google/resolve?name=${d}&type=A`);
+                    const json = await res.json();
+                    const records = (json.Answer || []).filter(a => a.type === 1);
+                    if(records.length > 0) {
+                        resolvedIp = records[0].data;
+                        color = ips.includes(resolvedIp) ? '#10b981' : '#f59e0b';
+                    }
+                } catch(e) {}
+                html += `<tr><td>${d}</td><td>A</td><td style="color:${color}; font-weight:700;">${resolvedIp}</td><td>${color === '#10b981' ? 'OK' : 'MISMATCH'}</td></tr>`;
+            }
+
+            body.innerHTML = html;
+            window.activeAuditServerId = id;
+        };
+
+        window.closeRdnsDetails = function() {
+            document.getElementById('rdnsDetailModal').style.display = 'none';
+        };
+
+        window.reScanCurrentServer = async function() {
+            if(!window.activeAuditServerId) return;
+            const btn = document.querySelector('#rdnsDetailModal .btn-primary');
+            const oldHtml = btn.innerHTML;
+            btn.innerHTML = 'Scanning...';
+            btn.disabled = true;
+            
+            const s = window.servers.find(x => x.id === window.activeAuditServerId);
             await window._checkServer(s);
             db.ref('nexus/rdnsData').set(window.rdnsData);
+            await window.showServerRdnsDetails(window.activeAuditServerId);
+            
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
         };
 
         window._checkServer = async (s) => {
@@ -2536,6 +2603,34 @@
             <div style="display:flex; justify-content:flex-end; gap:12px;">
                 <button class="btn-secondary" onclick="window.copyRdnsReport()"><i data-lucide="copy" size="14"></i> Copy List</button>
                 <button class="btn-primary" onclick="window.closeRdnsReport()">Close</button>
+            </div>
+        </div>
+    </div>
+    <!-- RDNS Detail Modal -->
+    <div id="rdnsDetailModal" class="modal-overlay" style="display:none; z-index:10000;">
+        <div class="modal-content" style="max-width:800px; padding:2rem; background:#0f172a;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h2 id="rdnsDetailTitle" style="font-family:'Outfit'; margin:0;">Audit Details</h2>
+                <button onclick="window.closeRdnsDetails()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div style="max-height:500px; overflow-y:auto; border:1px solid rgba(255,255,255,0.05); border-radius:12px; margin-bottom:1.5rem;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                    <thead style="background:rgba(0,0,0,0.3); position:sticky; top:0;">
+                        <tr>
+                            <th style="padding:12px; text-align:left; color:var(--text-secondary);">QUERY</th>
+                            <th style="padding:12px; text-align:left; color:var(--text-secondary);">TYPE</th>
+                            <th style="padding:12px; text-align:left; color:var(--text-secondary);">RESULT (DNS ANSWER)</th>
+                            <th style="padding:12px; text-align:left; color:var(--text-secondary);">MATCH</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rdnsDetailBody"></tbody>
+                </table>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+                <button class="btn-primary" onclick="window.reScanCurrentServer()"><i data-lucide="refresh-cw" size="14"></i> Re-Scan Now</button>
+                <button class="btn-secondary" onclick="window.closeRdnsDetails()">Close</button>
             </div>
         </div>
     </div>
