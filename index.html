@@ -997,22 +997,43 @@
                 alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
             }
             
-            // New High-Performance DNSBL Engine (Bypasses CORS)
-            async function checkDnsbl(ip) {
+            // Premium Multi-Engine Blacklist Checker
+            async function checkIpStatus(ip, token) {
+                // Engine 1: Spamhaus SIA API (Highest Accuracy if Token exists)
+                if(token) {
+                    try {
+                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await resp.json();
+                        if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
+                            const listName = data.lists && data.lists[0] ? data.lists[0].name : 'Spamhaus';
+                            return { listed: true, zone: `Spamhaus (${listName})` };
+                        }
+                    } catch (e) { console.warn("Spamhaus API Error (CORS or Token):", e); }
+                }
+
+                // Engine 2: DNSBL via Google DoH (Multi-Zone)
                 const zones = [
-                    { name: 'Spamhaus', zone: 'zen.spamhaus.org' },
+                    { name: 'Spamhaus ZEN', zone: 'zen.spamhaus.org' },
                     { name: 'SpamCop', zone: 'bl.spamcop.net' },
                     { name: 'Barracuda', zone: 'b.barracudacentral.org' },
                     { name: 'SORBS', zone: 'dnsbl.sorbs.net' },
-                    { name: 'PSBL', zone: 'psbl.surriel.com' }
+                    { name: 'UCEPROTECT 1', zone: 'dnsbl-1.uceprotect.net' },
+                    { name: 'SPFBL', zone: 'dnsbl.spfbl.net' },
+                    { name: 'NordSpam', zone: 'bl.nordspam.com' },
+                    { name: 'Abuse.ch', zone: 'drone.abuse.ch' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
                 for (let z of zones) {
                     try {
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: z.name };
-                    } catch (e) { console.error(`DNSBL ${z.name} error:`, e); }
+                        // If Answer exists and it's NOT the 'Refused' response (127.255.255.254)
+                        if (dns.Answer && dns.Answer.length > 0 && dns.Answer[0].data !== '127.255.255.254') {
+                            return { listed: true, zone: z.name };
+                        }
+                    } catch (e) { }
                 }
                 return { listed: false };
             }
@@ -1025,8 +1046,8 @@
                 progressBar.style.width = `${perc}%`;
                 progressPerc.textContent = `${perc}%`;
 
-                // Run DNSBL Check
-                const check = await checkDnsbl(item.ip);
+                // Run Multi-Engine Check
+                const check = await checkIpStatus(item.ip, spamhausToken);
                 let result = check.listed ? 'LISTED' : 'CLEAN';
 
                 if(!window.trackingData[item.trackId]) {
@@ -1039,8 +1060,7 @@
                 }
 
                 window.renderTrackingTable();
-                // Rate limiting to avoid Google DNS rate limits
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise(r => setTimeout(r, 150));
             }
 
             statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
