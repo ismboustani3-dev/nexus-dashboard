@@ -851,14 +851,25 @@
         window.trackingData = {};
         window.activeTrackTeam = 1;
 
+        window._dataLoaded = false; // Safety flag: true only after Firebase data is fully loaded
+
         window.saveData = function() {
-            db.ref('nexus').set({
-                projects: window.projects,
-                servers: window.servers,
-                teams: window.teamNames,
-                settings: window.settings,
-                tracking: window.trackingData,
-                history: window.deletionHistory || []
+            // ⛔ SAFETY GUARD: Block save if data hasn't loaded from Firebase yet
+            // This prevents accidental overwriting of Firebase data with empty arrays
+            if (!window._dataLoaded) {
+                console.warn("saveData blocked: Firebase data not yet loaded. Skipping to prevent data loss.");
+                return;
+            }
+
+            db.ref('nexus').update({
+                projects: window.projects || [],
+                servers: window.servers || [],
+                teams: window.teamNames || { team1: 'Team 1', team2: 'Team 2' },
+                settings: window.settings || { adminName: 'Admin', adminPass: 'admin', users: [] },
+                tracking: window.trackingData || {},
+                history: window.deletionHistory || [],
+                remarques: window.remarques || [],
+                rdnsData: window.rdnsData || {}
             }).then(() => {
                 const saveBtn = document.querySelector('#trackingView .bl-btn-primary');
                 if(saveBtn && saveBtn.innerHTML.includes('Save')) {
@@ -896,6 +907,7 @@
                 const lEl = document.getElementById('fbLoader');
                 if(lEl) lEl.remove();
                 
+                window._dataLoaded = true; // ✅ Data confirmed loaded — saveData now allowed
                 window.refreshUI();
                 if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
                 
