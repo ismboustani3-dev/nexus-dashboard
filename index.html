@@ -146,6 +146,7 @@
             <li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('remarques', this)"><i data-lucide="sticky-note"></i><span>Remarques</span></a></li>
             
             <li class="nav-item">
                 <a href="#" class="nav-link" onclick="window.toggleSubmenu('blacklistSubmenu', this)">
@@ -397,6 +398,22 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Remarques View -->
+        <div id="remarquesView" class="view" style="display:none; padding: 0 2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+                <h1 style="font-family: 'Outfit';">Remarques & Notes</h1>
+                <button class="btn-primary" onclick="window.saveRemarques()"><i data-lucide="save" size="14"></i> Save All Notes</button>
+            </div>
+            
+            <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:20px; padding:2rem; min-height:600px; display:flex; flex-direction:column; gap:1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <div style="display:flex; align-items:center; gap:10px; color:var(--accent-color); font-weight:700; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">
+                    <i data-lucide="edit-3" size="16"></i>
+                    <span>Editor Workspace</span>
+                </div>
+                <textarea id="globalRemarquesTextarea" placeholder="Start writing your team notes, reminders or strategies here..." style="flex:1; background:transparent; border:none; color:white; font-size:1.1rem; line-height:1.8; resize:none; outline:none; font-family: 'Inter', sans-serif;"></textarea>
             </div>
         </div>
 
@@ -863,6 +880,12 @@
                     window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                     window.deletionHistory = rData.history || [];
                     window.rdnsData = rData.rdnsData || {};
+                    window.remarques = rData.remarques || '';
+                    
+                    const rTextarea = document.getElementById('globalRemarquesTextarea');
+                    if(rTextarea && !rTextarea.matches(':focus')) {
+                        rTextarea.value = window.remarques;
+                    }
                     
                     const newTrackingStr = JSON.stringify(rData.tracking || {});
                     if (JSON.stringify(window.trackingData) !== newTrackingStr) {
@@ -1861,6 +1884,17 @@
             if(v === 'tracking') window.renderTrackingTable();
             if(v === 'domainBlacklist') window.renderDomainTable();
             if(v === 'team') window.renderTeamStats();
+            if(v === 'remarques') {
+                const rTextarea = document.getElementById('globalRemarquesTextarea');
+                if(rTextarea) rTextarea.value = window.remarques || '';
+            }
+        };
+
+        window.saveRemarques = function() {
+            const val = document.getElementById('globalRemarquesTextarea').value;
+            db.ref('nexus/remarques').set(val).then(() => {
+                alert('Remarques saved successfully!');
+            });
         };
 
         window.toggleSubmenu = function(id, el) {
