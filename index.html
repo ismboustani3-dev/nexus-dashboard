@@ -401,19 +401,47 @@
             </div>
         </div>
 
-        <!-- Remarques View -->
-        <div id="remarquesView" class="view" style="display:none; padding: 0 2rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+        <!-- Professional Remarques View -->
+        <div id="remarquesView" class="view" style="display:none; padding: 0 2rem; height: calc(100vh - 120px);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
                 <h1 style="font-family: 'Outfit';">Remarques & Notes</h1>
-                <button class="btn-primary" onclick="window.saveRemarques()"><i data-lucide="save" size="14"></i> Save All Notes</button>
+                <button class="btn-primary" onclick="window.addNewNote()"><i data-lucide="plus-circle" size="14"></i> New Note</button>
             </div>
             
-            <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:20px; padding:2rem; min-height:600px; display:flex; flex-direction:column; gap:1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                <div style="display:flex; align-items:center; gap:10px; color:var(--accent-color); font-weight:700; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">
-                    <i data-lucide="edit-3" size="16"></i>
-                    <span>Editor Workspace</span>
+            <div style="display:grid; grid-template-columns: 320px 1fr; gap:1.5rem; height: 100%; min-height:0;">
+                <!-- Sidebar Note List -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:16px; display:flex; flex-direction:column; overflow:hidden;">
+                    <div style="padding:1.2rem; border-bottom:1px solid var(--border-color); background:rgba(0,0,0,0.2);">
+                        <div style="position:relative;">
+                            <i data-lucide="search" size="14" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#64748b;"></i>
+                            <input type="text" id="noteSearch" placeholder="Search notes..." onkeyup="window.renderNoteList()" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px 8px 35px; color:white; font-size:0.8rem; outline:none;">
+                        </div>
+                    </div>
+                    <div id="noteListContainer" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;">
+                        <!-- Note items injected here -->
+                    </div>
                 </div>
-                <textarea id="globalRemarquesTextarea" placeholder="Start writing your team notes, reminders or strategies here..." style="flex:1; background:transparent; border:none; color:white; font-size:1.1rem; line-height:1.8; resize:none; outline:none; font-family: 'Inter', sans-serif;"></textarea>
+
+                <!-- Active Note Editor -->
+                <div id="activeNoteEditor" style="background:rgba(15, 23, 42, 0.4); border:1px solid var(--border-color); border-radius:20px; display:flex; flex-direction:column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow:hidden;">
+                    <div id="editorPlaceholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary);">
+                        <i data-lucide="sticky-note" size="48" style="opacity:0.2; margin-bottom:1rem;"></i>
+                        <p>Select a note to edit or create a new one</p>
+                    </div>
+                    <div id="editorContent" style="display:none; flex:1; flex-direction:column;">
+                        <div style="padding:1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.01);">
+                            <div style="flex:1;">
+                                <input type="text" id="activeNoteTitle" onkeyup="window.syncActiveNote()" style="width:100%; background:transparent; border:none; color:white; font-size:1.4rem; font-weight:700; font-family:'Outfit'; outline:none;" placeholder="Note Title">
+                                <div id="activeNoteMeta" style="font-size:0.7rem; color:var(--accent-color); margin-top:4px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">Last edited: Just now</div>
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="window.deleteActiveNote()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); width:35px; height:35px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i data-lucide="trash-2" size="16"></i></button>
+                                <button class="btn-primary" onclick="window.saveAllNotes()"><i data-lucide="save" size="14"></i> Save</button>
+                            </div>
+                        </div>
+                        <textarea id="activeNoteBody" onkeyup="window.syncActiveNote()" placeholder="Write something incredible..." style="flex:1; background:transparent; border:none; color:#e2e8f0; padding:2rem; font-size:1.1rem; line-height:1.8; resize:none; outline:none; font-family: 'Inter', sans-serif;"></textarea>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -880,12 +908,18 @@
                     window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                     window.deletionHistory = rData.history || [];
                     window.rdnsData = rData.rdnsData || {};
-                    window.remarques = rData.remarques || '';
+                    window.remarques = rData.remarques || []; // Changed to array
                     
-                    const rTextarea = document.getElementById('globalRemarquesTextarea');
-                    if(rTextarea && !rTextarea.matches(':focus')) {
-                        rTextarea.value = window.remarques;
+                    if(window.activeNoteId) {
+                        const note = window.remarques.find(n => n.id === window.activeNoteId);
+                        if(note) {
+                            const titleEl = document.getElementById('activeNoteTitle');
+                            const bodyEl = document.getElementById('activeNoteBody');
+                            if(titleEl && !titleEl.matches(':focus')) titleEl.value = note.title;
+                            if(bodyEl && !bodyEl.matches(':focus')) bodyEl.value = note.content;
+                        }
                     }
+                    window.renderNoteList();
                     
                     const newTrackingStr = JSON.stringify(rData.tracking || {});
                     if (JSON.stringify(window.trackingData) !== newTrackingStr) {
@@ -1876,6 +1910,93 @@
             }
         };
 
+        // Remarques Professional Multi-Note Logic
+        window.activeNoteId = null;
+        window.remarques = [];
+
+        window.addNewNote = function() {
+            const newNote = {
+                id: 'note_' + Date.now(),
+                title: 'New Note',
+                content: '',
+                updated: new Date().toISOString(),
+                author: window.currentUser.name || 'Admin'
+            };
+            window.remarques.unshift(newNote);
+            window.selectNote(newNote.id);
+            window.renderNoteList();
+        };
+
+        window.selectNote = function(id) {
+            window.activeNoteId = id;
+            const note = window.remarques.find(n => n.id === id);
+            if(!note) return;
+
+            document.getElementById('editorPlaceholder').style.display = 'none';
+            document.getElementById('editorContent').style.display = 'flex';
+            document.getElementById('activeNoteTitle').value = note.title;
+            document.getElementById('activeNoteBody').value = note.content;
+            document.getElementById('activeNoteMeta').innerText = `Last edited: ${new Date(note.updated).toLocaleString()} by ${note.author}`;
+            
+            window.renderNoteList();
+        };
+
+        window.syncActiveNote = function() {
+            const note = window.remarques.find(n => n.id === window.activeNoteId);
+            if(note) {
+                note.title = document.getElementById('activeNoteTitle').value;
+                note.content = document.getElementById('activeNoteBody').value;
+                note.updated = new Date().toISOString();
+                window.renderNoteList();
+            }
+        };
+
+        window.deleteActiveNote = function() {
+            if(!confirm('Are you sure you want to delete this note?')) return;
+            window.remarques = window.remarques.filter(n => n.id !== window.activeNoteId);
+            window.activeNoteId = null;
+            document.getElementById('editorPlaceholder').style.display = 'flex';
+            document.getElementById('editorContent').style.display = 'none';
+            window.saveAllNotes();
+        };
+
+        window.saveAllNotes = function() {
+            db.ref('nexus/remarques').set(window.remarques).then(() => {
+                const btn = document.querySelector('#activeNoteEditor .btn-primary');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check"></i> Saved';
+                setTimeout(() => { btn.innerHTML = orig; if(window.lucide) lucide.createIcons(); }, 2000);
+            });
+        };
+
+        window.renderNoteList = function() {
+            const container = document.getElementById('noteListContainer');
+            if(!container) return;
+
+            const search = document.getElementById('noteSearch').value.toLowerCase();
+            const filtered = window.remarques.filter(n => 
+                n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search)
+            );
+
+            container.innerHTML = filtered.map(n => {
+                const isActive = n.id === window.activeNoteId;
+                const date = new Date(n.updated).toLocaleDateString();
+                const snippet = n.content.substring(0, 40) + (n.content.length > 40 ? '...' : '');
+                return `
+                    <div onclick="window.selectNote('${n.id}')" style="padding:12px; border-radius:10px; cursor:pointer; transition:0.2s; background:${isActive ? 'rgba(99,102,241,0.15)' : 'transparent'}; border:1px solid ${isActive ? 'var(--accent-color)' : 'transparent'};">
+                        <div style="font-weight:700; font-size:0.85rem; color:${isActive ? 'var(--accent-color)' : 'white'}; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${n.title || 'Untitled'}</div>
+                        <div style="font-size:0.7rem; color:var(--text-secondary); display:flex; justify-content:space-between;">
+                            <span>${date}</span>
+                            <span style="font-style:italic;">${n.author}</span>
+                        </div>
+                        <div style="font-size:0.7rem; color:rgba(255,255,255,0.4); margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${snippet || 'No content...'}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            if(window.lucide) lucide.createIcons();
+        };
+
         window.switchView = function(v, el) { 
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
             if(el) el.classList.add('active'); 
@@ -1884,17 +2005,11 @@
             if(v === 'tracking') window.renderTrackingTable();
             if(v === 'domainBlacklist') window.renderDomainTable();
             if(v === 'team') window.renderTeamStats();
-            if(v === 'remarques') {
-                const rTextarea = document.getElementById('globalRemarquesTextarea');
-                if(rTextarea) rTextarea.value = window.remarques || '';
-            }
+            if(v === 'remarques') window.renderNoteList();
         };
 
-        window.saveRemarques = function() {
-            const val = document.getElementById('globalRemarquesTextarea').value;
-            db.ref('nexus/remarques').set(val).then(() => {
-                alert('Remarques saved successfully!');
-            });
+        window.saveRemarques = function() { // Legacy cleanup
+            window.saveAllNotes();
         };
 
         window.toggleSubmenu = function(id, el) {
