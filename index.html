@@ -896,7 +896,10 @@
                             </h2>
                             <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:5px;">Once you delete all data, there is no going back. Please be certain.</p>
                         </div>
-                        <button class="danger" style="background:#ef4444; color:white; border:none; padding:10px 25px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Outfit';" onclick="window.hardReset()">HARD RESET (CLEAR ALL)</button>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn-primary" style="background:#10b981; border:none; padding:10px 20px; border-radius:10px; font-weight:700; cursor:pointer;" onclick="window.fixOrphanedServers()">🔍 REPAIR & RECOVER DATA</button>
+                            <button class="danger" style="background:#ef4444; color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Outfit';" onclick="window.hardReset()">HARD RESET (CLEAR ALL)</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1029,6 +1032,36 @@
                 if(lEl) lEl.remove();
                 window.refreshUI();
             });
+        };
+
+        window.fixOrphanedServers = function() {
+            let fixedCount = 0;
+            let initialCount = window.servers.length;
+            
+            // 1. Identify valid team IDs
+            const validTeamIds = Object.keys(window.teamNames).map(k => k.replace('team',''));
+            
+            // 2. Scan and repair
+            window.servers = window.servers.map(s => {
+                const teamId = (s.team || '').toString();
+                if (!teamId || !validTeamIds.includes(teamId)) {
+                    fixedCount++;
+                    return { ...s, team: 'orphaned' };
+                }
+                return s;
+            });
+            
+            if (fixedCount > 0) {
+                // Ensure 'orphaned' team name exists
+                if (!window.teamNames.teamorphaned) {
+                    window.teamNames.teamorphaned = "⚠️ RECOVERED / UNASSIGNED";
+                }
+                window.saveData();
+                alert(`SUCCESS: Found and recovered ${fixedCount} orphaned servers! They are now visible in the "RECOVERED" section at the bottom of the Team view.`);
+                window.refreshUI();
+            } else {
+                alert(`No orphaned servers found among ${initialCount} total servers.`);
+            }
         };
 
         window.logout = function() { if(confirm('Reset App Data?')) { localStorage.clear(); location.reload(); } };
