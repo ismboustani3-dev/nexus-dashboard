@@ -1023,37 +1023,39 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Priority: HetrixTools API (Most Reliable for Spamhaus in Browser)
+                // 1. HetrixTools API
                 if(hKey) {
                     try {
                         const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
-                        const data = await resp.json();
-                        if(data.status === 'success' && data.blacklisted_count > 0) {
-                            return { listed: true, zone: `Hetrix (${data.blacklisted_on[0].rbl})` };
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if(data.status === 'success' && data.blacklisted_count > 0) {
+                                return { listed: true, zone: `Hetrix (${data.blacklisted_on[0].rbl})` };
+                            }
                         }
-                    } catch (e) { console.warn("Hetrix API Error:", e); }
+                    } catch (e) { }
                 }
 
-                // 2. Official Spamhaus SIA API
+                // 2. Spamhaus SIA API
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
                             headers: { 'Authorization': `Bearer ${sToken}` }
                         });
-                        const data = await resp.json();
-                        if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
-                            return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
+                                return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
+                            }
                         }
                     } catch (e) { }
                 }
 
-                // 3. Native DNSBL via Google DoH (With Block Detection)
+                // 3. Native DNSBL via Google DoH
                 const zones = [
                     { name: 'Spamhaus ZEN', zone: 'zen.spamhaus.org' },
                     { name: 'SpamCop', zone: 'bl.spamcop.net' },
-                    { name: 'Barracuda', zone: 'b.barracudacentral.org' },
-                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' },
-                    { name: 'SPFBL', zone: 'dnsbl.spfbl.net' }
+                    { name: 'Barracuda', zone: 'b.barracudacentral.org' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
                 for (let z of zones) {
@@ -1062,9 +1064,9 @@
                         const dns = await resp.json();
                         if (dns.Answer && dns.Answer.length > 0) {
                             const val = dns.Answer[0].data;
-                            // Spamhaus error codes (blocked resolver)
-                            if (val.startsWith('127.255.255.')) continue; 
-                            return { listed: true, zone: z.name };
+                            if (!val.startsWith('127.255.255.')) {
+                                return { listed: true, zone: z.name };
+                            }
                         }
                     } catch (e) { }
                 }
