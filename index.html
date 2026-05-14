@@ -887,6 +887,18 @@
                     </div>
                     <div id="usersList"></div>
                 </div>
+                <!-- Danger Zone Card -->
+                <div class="dns-card" style="grid-column: 1 / -1; border: 1px solid rgba(239,68,68,0.2); background: rgba(239,68,68,0.02); margin-top: 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h2 style="font-size:1.2rem; font-family:'Outfit'; color:#ef4444; display:flex; align-items:center; gap:8px;">
+                                <i data-lucide="alert-triangle"></i> Danger Zone
+                            </h2>
+                            <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:5px;">Once you delete all data, there is no going back. Please be certain.</p>
+                        </div>
+                        <button class="danger" style="background:#ef4444; color:white; border:none; padding:10px 25px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Outfit';" onclick="window.hardReset()">HARD RESET (CLEAR ALL)</button>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -938,7 +950,6 @@
                 teams: window.teamNames || { team1: 'Team 1', team2: 'Team 2' },
                 settings: window.settings || { adminName: 'Admin', adminPass: 'admin', users: [] },
                 tracking: window.trackingData || {},
-                history: window.deletionHistory || [],
                 remarques: window.remarques || [],
                 rdnsData: window.rdnsData || {}
             }).then(() => {
@@ -968,7 +979,6 @@
                 window.settings = data.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                 window.trackingData = data.tracking || {};
                 window.rdnsData = data.rdnsData || {};
-                window.deletionHistory = data.history || [];
                 
                 window.currentUser.name = window.settings.adminName;
                 document.getElementById('setAdminName').value = window.settings.adminName;
@@ -989,7 +999,7 @@
                     window.servers = rData.servers || [];
                     window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
                     window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
-                    window.deletionHistory = rData.history || [];
+                    // History node ignored
                     window.rdnsData = rData.rdnsData || {};
                     window.remarques = rData.remarques || []; // Changed to array
                     
@@ -1022,6 +1032,28 @@
         };
 
         window.logout = function() { if(confirm('Reset App Data?')) { localStorage.clear(); location.reload(); } };
+        
+        window.hardReset = function() {
+            const code = Math.floor(1000 + Math.random() * 9000);
+            const confirmation = prompt(`⚠️ WARNING: THIS WILL PERMANENTLY DELETE ALL PROJECTS AND SERVERS FROM FIREBASE.\n\nEnter the code ${code} to confirm:`);
+            if (confirmation === code.toString()) {
+                db.ref('nexus').set({
+                    projects: [],
+                    servers: [],
+                    teams: { team1: 'Team 1', team2: 'Team 2' },
+                    settings: { adminName: 'Admin', adminPass: 'admin', users: [] },
+                    tracking: {},
+                    remarques: [],
+                    rdnsData: {}
+                }).then(() => {
+                    localStorage.clear();
+                    alert("DATABASE WIPED SUCCESSFULLY. The application will now reload.");
+                    location.reload();
+                }).catch(err => alert("Error wiping database: " + err.message));
+            } else {
+                alert("Reset cancelled. Confirmation code was incorrect.");
+            }
+        };
 
         window.openImportModal = function() { document.getElementById('importText').value = ''; document.getElementById('importModalOverlay').style.display = 'flex'; };
         window.closeImportModal = function() { document.getElementById('importModalOverlay').style.display = 'none'; };
@@ -1363,15 +1395,7 @@
             const initialCount = window.servers.length;
             const toDelete = window.servers.filter(s => lines.includes(s.name));
             
-            toDelete.forEach(srv => {
-                window.deletionHistory.push({
-                    name: srv.name,
-                    ip: (srv.ip || '').split(/[\s\n,]+/)[0] || '-',
-                    owner: srv.owner || '-',
-                    team: srv.team,
-                    deletedAt: new Date().toISOString()
-                });
-            });
+            // History tracking removed
 
             window.servers = window.servers.filter(s => !lines.includes(s.name));
             const deletedCount = initialCount - window.servers.length;
@@ -1709,18 +1733,6 @@
                         </div>`;
                 }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Class data</div>';
 
-                const teamDeleted = (window.deletionHistory || []).filter(h => h.team == tId);
-                const deletedMonthStats = Object.entries(teamDeleted.reduce((acc, item) => {
-                    const d = new Date(item.deletedAt);
-                    const m = d.toLocaleString('default', { month: 'short' });
-                    acc[m] = (acc[m] || 0) + 1;
-                    return acc;
-                }, {})).map(([m, count]) => `
-                    <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:4px;">
-                        <span>${m}</span><span style="color:#ef4444; font-weight:bold;">${count}</span>
-                    </div>
-                `).join('') || '<div style="font-size:0.7rem; color:var(--text-secondary)">0 Deleted</div>';
-
                     const rows = srvs.map(s => {
                         const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                         const ipDisplay = ips.length > 1 ? `
@@ -1768,46 +1780,7 @@
                         return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td>${rdnsDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
                     }).join('');
 
-                // Render Deleted Servers for this team
-                let historyHtml = '';
-                if(teamDeleted.length > 0) {
-                    const sorted = [...teamDeleted].sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
-                    const groupedByMonth = sorted.reduce((acc, item) => {
-                        const d = new Date(item.deletedAt);
-                        const my = d.toLocaleString('default', { month: 'long', year: 'numeric' });
-                        if(!acc[my]) acc[my] = [];
-                        acc[my].push(item);
-                        return acc;
-                    }, {});
-
-                    historyHtml = `
-                        <div id="history-team-${tId}" style="margin-top: 2rem; border-top: 1px dashed var(--border-color); padding-top: 1.5rem;">
-                            <h4 style="color:#ef4444; font-size:0.8rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:8px; letter-spacing:1px;">
-                                <i data-lucide="history" size="16"></i> DELETED SERVERS HISTORY
-                            </h4>
-                            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
-                                ${Object.entries(groupedByMonth).map(([month, items]) => `
-                                    <div style="background:rgba(239,68,68,0.03); border:1px solid rgba(239,68,68,0.1); border-radius:12px; padding:1.2rem;">
-                                        <div style="font-size:0.7rem; color:rgba(239,68,68,0.7); margin-bottom:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(239,68,68,0.1); padding-bottom:8px;">${month}</div>
-                                        <div style="max-height:200px; overflow-y:auto; padding-right:5px;">
-                                            <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
-                                                <tbody>
-                                                    ${items.map(it => `
-                                                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                                                            <td style="padding:6px 0; font-weight:600;">${it.name}</td>
-                                                            <td style="padding:6px 0; color:var(--text-secondary); text-align:right;">${it.ip}</td>
-                                                            <td style="padding:6px 0; color:var(--text-secondary); text-align:right; width:60px;">${it.owner}</td>
-                                                        </tr>
-                                                    `).join('')}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
+                let teamDeleted = []; // History removed at user request
 
                 return `
                     <div class="team-column">
@@ -1822,10 +1795,6 @@
                         <div class="team-analytics">
                             <div class="analytics-card"><h4>Servers</h4><div class="val">${srvs.length}</div></div>
                             <div class="analytics-card"><h4>IP Pool</h4><div class="val">${totalIps}</div></div>
-                            <div class="analytics-card" onclick="document.getElementById('history-team-${tId}')?.scrollIntoView({behavior:'smooth'})" style="cursor:pointer; border:1px solid rgba(239,68,68,0.1); background:rgba(239,68,68,0.02);">
-                                <h4 style="color:#ef4444;">Deleted</h4>
-                                <div style="margin-top:10px;">${deletedMonthStats}</div>
-                            </div>
                             <div class="analytics-card"><h4>Providers</h4><div style="margin-top:10px;">${asnList}</div></div>
                             <div class="analytics-card"><h4>Classes</h4><div style="margin-top:10px;">${classList}</div></div>
                         </div>
@@ -1835,7 +1804,6 @@
                                 <tbody>${rows}</tbody>
                             </table>
                         </div>
-                        ${historyHtml}
                     </div>`;
             };
                 // Global Organization Stat Logic
@@ -1966,16 +1934,6 @@
 
         window.deleteServer = function(id) {
             if(confirm('Delete this server?')) {
-                const srv = window.servers.find(s => s.id === id);
-                if(srv) {
-                    window.deletionHistory.push({
-                        name: srv.name,
-                        ip: (srv.ip || '').split(/[\s\n,]+/)[0] || '-',
-                        owner: srv.owner || '-',
-                        team: srv.team,
-                        deletedAt: new Date().toISOString()
-                    });
-                }
                 window.servers = window.servers.filter(s => s.id !== id);
                 window.saveData();
             }
@@ -2194,57 +2152,7 @@
 
         window.toggleTools = function(el) { window.toggleSubmenu('toolsSubmenu', el); };
 
-        window.renderHistory = function() {
-            const container = document.getElementById('historyContent');
-            if(!container) return;
-            if(!window.deletionHistory || window.deletionHistory.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding: 4rem; color:var(--text-secondary);">No deletion history found.</div>';
-                return;
-            }
-
-            // Sort by date desc
-            const sorted = [...window.deletionHistory].sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
-            
-            // Group by month
-            const grouped = sorted.reduce((acc, item) => {
-                const d = new Date(item.deletedAt);
-                const monthYear = d.toLocaleString('default', { month: 'long', year: 'numeric' });
-                if(!acc[monthYear]) acc[monthYear] = [];
-                acc[monthYear].push(item);
-                return acc;
-            }, {});
-
-            container.innerHTML = Object.entries(grouped).map(([month, items]) => `
-                <div style="margin-bottom: 2rem;">
-                    <h3 style="color:var(--accent-color); font-family:'Outfit'; margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="calendar"></i> ${month}
-                    </h3>
-                    <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
-                        <table class="server-table" style="margin:0;">
-                            <thead>
-                                <tr>
-                                    <th>Server Name</th>
-                                    <th>IP (Main)</th>
-                                    <th>Owner</th>
-                                    <th>Deleted Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${items.map(item => `
-                                    <tr>
-                                        <td style="font-weight:600;">${item.name}</td>
-                                        <td style="font-family:monospace; color:var(--accent-color);">${item.ip}</td>
-                                        <td>${item.owner}</td>
-                                        <td style="color:var(--text-secondary); font-size:0.75rem;">${new Date(item.deletedAt).toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `).join('');
-            if(window.lucide) window.lucide.createIcons();
-        };
+        window.renderHistory = function() {}; // Feature removed
 
         window.setTrackTeam = function(team) {
             window.activeTrackTeam = team;
