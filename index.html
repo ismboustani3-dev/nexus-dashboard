@@ -191,6 +191,25 @@
                 </div>
                 <div id="globalClassDist"></div>
             </div>
+
+            <!-- New Organization Stat Card -->
+            <div style="margin-bottom: 1.5rem;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:16px; padding:1.5rem;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.2rem;">
+                        <i data-lucide="building-2" size="18" style="color:var(--accent-color);"></i>
+                        <span style="font-size:0.75rem; font-weight:800; letter-spacing:1px; color:var(--text-secondary); text-transform:uppercase;">Organization Stat</span>
+                    </div>
+                    <div id="orgStatContainer">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span id="topOrgName" style="font-weight:700; color:white; font-size:0.9rem;">Loading...</span>
+                            <span id="topOrgCount" style="font-size:0.8rem; color:var(--accent-color); font-weight:800;">0 IPs (0%)</span>
+                        </div>
+                        <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:10px; overflow:hidden;">
+                            <div id="topOrgBar" style="height:100%; width:0%; background:linear-gradient(90deg, #6366f1, #a855f7); box-shadow: 0 0 15px rgba(99,102,241,0.4); transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div>
         </div>
         <div id="projectsView" class="view" style="display:none;">
@@ -1614,7 +1633,37 @@
                         ${historyHtml}
                     </div>`;
             };
-            tg.innerHTML = '';
+                // Global Organization Stat Logic
+                const orgCounts = {}; let validIps = 0;
+                window.servers.forEach(s => {
+                    const ips = (s.ip || '').split(/[,\n]+/).map(i => i.trim()).filter(i => i);
+                    ips.forEach(ip => {
+                        const tid = `${s.id}_${ip.replace(/\./g, '-')}`;
+                        const trk = (window.trackingData || {})[tid];
+                        if(trk && trk.isp && trk.isp !== 'N/A' && trk.isp !== 'PENDING' && trk.isp !== 'undefined') {
+                            orgCounts[trk.isp] = (orgCounts[trk.isp] || 0) + 1;
+                            validIps++;
+                        }
+                    });
+                });
+                const sortedOrgs = Object.entries(orgCounts).sort((a,b) => b[1] - a[1]);
+                const topOrgNameEl = document.getElementById('topOrgName');
+                const topOrgCountEl = document.getElementById('topOrgCount');
+                const topOrgBarEl = document.getElementById('topOrgBar');
+                
+                if(topOrgNameEl && sortedOrgs.length > 0) {
+                    const top = sortedOrgs[0];
+                    const pct = Math.round((top[1] / validIps) * 100);
+                    topOrgNameEl.innerText = top[0];
+                    topOrgCountEl.innerText = `${top[1]} IPs (${pct}%)`;
+                    topOrgBarEl.style.width = `${pct}%`;
+                } else if(topOrgNameEl) {
+                    topOrgNameEl.innerText = 'No Data Available';
+                    topOrgCountEl.innerText = '0 IPs (0%)';
+                    topOrgBarEl.style.width = '0%';
+                }
+
+                tg.innerHTML = '';
             if(teamFilter === 'all' || teamFilter === '1') tg.innerHTML += render(1, window.teamNames.team1);
             if(teamFilter === 'all' || teamFilter === '2') tg.innerHTML += render(2, window.teamNames.team2);
             
