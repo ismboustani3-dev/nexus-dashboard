@@ -1021,40 +1021,49 @@
                 alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
             }
             
-            // Premium Multi-Engine Blacklist Checker
-            async function checkIpStatus(ip, token) {
-                // Engine 1: Spamhaus SIA API (Highest Accuracy if Token exists)
-                if(token) {
+            // Ultra-Reliable Multi-Source IP Reputation Engine
+            async function checkIpStatus(ip, sToken, hKey) {
+                // 1. Priority: HetrixTools API (Most Reliable for Spamhaus in Browser)
+                if(hKey) {
+                    try {
+                        const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
+                        const data = await resp.json();
+                        if(data.status === 'success' && data.blacklisted_count > 0) {
+                            return { listed: true, zone: `Hetrix (${data.blacklisted_on[0].rbl})` };
+                        }
+                    } catch (e) { console.warn("Hetrix API Error:", e); }
+                }
+
+                // 2. Official Spamhaus SIA API
+                if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
+                            headers: { 'Authorization': `Bearer ${sToken}` }
                         });
                         const data = await resp.json();
                         if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
-                            const listName = data.lists && data.lists[0] ? data.lists[0].name : 'Spamhaus';
-                            return { listed: true, zone: `Spamhaus (${listName})` };
+                            return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
                         }
-                    } catch (e) { console.warn("Spamhaus API Error (CORS or Token):", e); }
+                    } catch (e) { }
                 }
 
-                // Engine 2: DNSBL via Google DoH (Multi-Zone)
+                // 3. Native DNSBL via Google DoH (With Block Detection)
                 const zones = [
                     { name: 'Spamhaus ZEN', zone: 'zen.spamhaus.org' },
                     { name: 'SpamCop', zone: 'bl.spamcop.net' },
                     { name: 'Barracuda', zone: 'b.barracudacentral.org' },
                     { name: 'SORBS', zone: 'dnsbl.sorbs.net' },
-                    { name: 'UCEPROTECT 1', zone: 'dnsbl-1.uceprotect.net' },
-                    { name: 'SPFBL', zone: 'dnsbl.spfbl.net' },
-                    { name: 'NordSpam', zone: 'bl.nordspam.com' },
-                    { name: 'Abuse.ch', zone: 'drone.abuse.ch' }
+                    { name: 'SPFBL', zone: 'dnsbl.spfbl.net' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
                 for (let z of zones) {
                     try {
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
-                        // If Answer exists and it's NOT the 'Refused' response (127.255.255.254)
-                        if (dns.Answer && dns.Answer.length > 0 && dns.Answer[0].data !== '127.255.255.254') {
+                        if (dns.Answer && dns.Answer.length > 0) {
+                            const val = dns.Answer[0].data;
+                            // Spamhaus error codes (blocked resolver)
+                            if (val.startsWith('127.255.255.')) continue; 
                             return { listed: true, zone: z.name };
                         }
                     } catch (e) { }
@@ -1070,8 +1079,9 @@
                 progressBar.style.width = `${perc}%`;
                 progressPerc.textContent = `${perc}%`;
 
-                // Run Multi-Engine Check
-                const check = await checkIpStatus(item.ip, spamhausToken);
+                // Run Multi-Source Check
+                const hetrixKey = window.settings.hetrixKey;
+                const check = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
                 let result = check.listed ? 'LISTED' : 'CLEAN';
 
                 if(!window.trackingData[item.trackId]) {
