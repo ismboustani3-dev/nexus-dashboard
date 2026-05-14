@@ -266,6 +266,10 @@
                         <option value="PENDING">Pending</option>
                     </select>
                 </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: auto;">
+                    <button class="btn-primary" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;" onclick="window.deleteFilteredServers()"><i data-lucide="trash-2" size="14"></i> Delete Filtered</button>
+                    <button class="danger" style="background:#ef4444; color:white; padding: 0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:700;" onclick="window.clearAllServers()"><i data-lucide="skull" size="14"></i> CLEAR DB</button>
+                </div>
             </div>
 
             <div class="card-container" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color);">
@@ -2290,11 +2294,36 @@
                     <td><div style="display:flex; gap:5px; justify-content:flex-end;">
                         <button onclick="window.editServer('${s.id}')">Edit</button>
                         <button onclick="window.checkSingleIp('${tid}')" style="background:rgba(16,185,129,0.1); color:#10b981; border-color:rgba(16,185,129,0.3);">Check</button>
+                        <button class="danger" onclick="window.deleteServer('${s.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;">Del</button>
                     </div></td>
                 </tr>`;
             }).join('') || '<tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--text-secondary);">No servers matching filters.</td></tr>';
             
+            window.lastFilteredDbServers = filtered; // Store for bulk delete
             if(window.lucide) lucide.createIcons();
+        };
+
+        window.deleteFilteredServers = function() {
+            if(!window.lastFilteredDbServers || window.lastFilteredDbServers.length === 0) return;
+            if(confirm(`Are you sure you want to delete ALL ${window.lastFilteredDbServers.length} filtered servers?`)) {
+                const idsToDelete = window.lastFilteredDbServers.map(s => s.id);
+                window.servers = window.servers.filter(s => !idsToDelete.includes(s.id));
+                window.saveData();
+                window.refreshUI();
+                alert(`Successfully deleted ${idsToDelete.length} servers.`);
+            }
+        };
+
+        window.clearAllServers = function() {
+            if(confirm('🚨 NUCLEAR ACTION: Delete EVERY server in the entire database? This cannot be undone!')) {
+                const code = Math.floor(1000 + Math.random() * 9000);
+                if(prompt(`Enter confirmation code ${code} to wipe EVERYTHING:`) === code.toString()) {
+                    window.servers = [];
+                    window.saveData();
+                    window.refreshUI();
+                    alert('Database wiped.');
+                }
+            }
         };
 
         window.renderHistory = function() {}; // Feature removed
