@@ -2302,30 +2302,35 @@
                 // Check PTR for all IPs until we find one or finish
                 for(let ip of ips) {
                     const revIp = ip.split('.').reverse().join('.') + '.in-addr.arpa';
-                    const rRes = await fetch(`https://dns.google/resolve?name=${revIp}&type=PTR`);
-                    const rJson = await rRes.json();
-                    const ptrRecords = (rJson.Answer || []).filter(a => a.type === 12);
-                    
-                    if (ptrRecords.length > 0) {
-                        const ptr = ptrRecords[0].data.replace(/\.$/, '').toLowerCase();
-                        ptrFound = ptr;
-                        // Check if this PTR matches ANY of our domains
-                        if (domains.some(d => ptr === d || ptr.includes(d))) {
-                            rdnsOk = true;
-                            break;
+                    try {
+                        const rRes = await fetch(`https://dns.google/resolve?name=${revIp}&type=PTR`);
+                        const rJson = await rRes.json();
+                        const ptrRecords = (rJson.Answer || []).filter(a => a.type === 12);
+                        
+                        if (ptrRecords.length > 0) {
+                            const ptr = ptrRecords[0].data.replace(/\.$/, '').toLowerCase();
+                            ptrFound = ptr;
+                            // Strict check: Exact match OR is a subdomain (.domain.com)
+                            if (domains.some(d => ptr === d || ptr.endsWith('.' + d))) {
+                                rdnsOk = true;
+                                break;
+                            }
                         }
-                    }
+                    } catch(e) { console.warn("PTR Check failed for " + ip); }
                 }
                 
-                let status = 'NOT ACTIVE';
+                let status = 'RDNS FAILED';
                 let color = '#ef4444';
 
                 if (rdnsOk) {
                     status = 'RDNS OK';
                     color = '#10b981';
+                } else if (ptrFound) {
+                    status = 'RDNS MISMATCH';
+                    color = '#f59e0b';
                 } else if (forwardOk) {
-                    status = ptrFound ? 'PTR MISMATCH' : 'A OK';
-                    color = ptrFound ? '#f59e0b' : '#10b981';
+                    status = 'A OK (NO PTR)';
+                    color = '#6366f1';
                 }
 
                 window.rdnsData[s.id] = { 
