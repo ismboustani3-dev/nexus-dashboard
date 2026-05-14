@@ -997,6 +997,26 @@
                 alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
             }
             
+            // New High-Performance DNSBL Engine (Bypasses CORS)
+            async function checkDnsbl(ip) {
+                const zones = [
+                    { name: 'Spamhaus', zone: 'zen.spamhaus.org' },
+                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
+                    { name: 'Barracuda', zone: 'b.barracudacentral.org' },
+                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' },
+                    { name: 'PSBL', zone: 'psbl.surriel.com' }
+                ];
+                const revIp = ip.split('.').reverse().join('.');
+                for (let z of zones) {
+                    try {
+                        const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
+                        const dns = await resp.json();
+                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: z.name };
+                    } catch (e) { console.error(`DNSBL ${z.name} error:`, e); }
+                }
+                return { listed: false };
+            }
+
             for(let i=0; i < allIPs.length; i++) {
                 const item = allIPs[i];
                 const perc = Math.round(((i + 1) / allIPs.length) * 100);
@@ -1005,43 +1025,22 @@
                 progressBar.style.width = `${perc}%`;
                 progressPerc.textContent = `${perc}%`;
 
-                let result = 'CLEAN';
-                
-                if(spamhausToken) {
-                    try {
-                        const response = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${item.ip}`, {
-                            headers: { 'Authorization': `Bearer ${spamhausToken}` }
-                        });
-                        const data = await response.json();
-                        // Spamhaus SIA result logic: if reputation score is bad or list entries exist
-                        result = (data.reputation_score > 50 || (data.lists && data.lists.length > 0)) ? 'LISTED' : 'CLEAN';
-                        if(result === 'LISTED' && data.lists && data.lists[0]) {
-                            window.trackingData[item.trackId].notes = `Spamhaus: ${data.lists[0].name}`;
-                        }
-                    } catch (err) { console.error('Spamhaus error:', err); result = 'ERROR'; }
-                } else if(hetrixKey) {
-                    try {
-                        // HetrixTools V2 API
-                        const response = await fetch(`https://api.hetrixtools.com/v2/${hetrixKey}/blacklist-check/ipv4/${item.ip}/`);
-                        const data = await response.json();
-                        if(data.status === 'success') {
-                            result = data.blacklisted_count > 0 ? 'LISTED' : 'CLEAN';
-                            if(result === 'LISTED' && data.blacklisted_on && data.blacklisted_on[0]) {
-                                window.trackingData[item.trackId].notes = `Hetrix: ${data.blacklisted_on[0].rbl}`;
-                            }
-                        } else { result = 'ERROR'; }
-                    } catch (err) { console.error('Hetrix error:', err); result = 'ERROR'; }
-                } else {
-                    // Simulation
-                    await new Promise(r => setTimeout(r, 150 + Math.random() * 200));
-                    result = Math.random() < 0.05 ? 'LISTED' : 'CLEAN';
-                }
+                // Run DNSBL Check
+                const check = await checkDnsbl(item.ip);
+                let result = check.listed ? 'LISTED' : 'CLEAN';
 
                 if(!window.trackingData[item.trackId]) {
                     window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                 }
+                
                 window.trackingData[item.trackId][today] = result;
+                if(check.listed) {
+                    window.trackingData[item.trackId].notes = `Listed: ${check.zone}`;
+                }
+
                 window.renderTrackingTable();
+                // Rate limiting to avoid Google DNS rate limits
+                await new Promise(r => setTimeout(r, 100));
             }
 
             statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
