@@ -146,6 +146,7 @@
             <li class="nav-item"><a href="#" class="nav-link active" onclick="window.switchView('dashboard', this)"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('projects', this)"><i data-lucide="folder-kanban"></i><span>Projects</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('team', this)"><i data-lucide="users"></i><span>Team</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="window.switchView('database', this)"><i data-lucide="database"></i><span>Database</span></a></li>
             
             <li class="nav-item">
                 <a href="#" class="nav-link" onclick="window.toggleSubmenu('blacklistSubmenu', this)">
@@ -238,6 +239,53 @@
             <div id="projectGrid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;"></div>
         </div>
         
+        <div id="databaseView" class="view" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+                <h1 style="font-family: 'Outfit';">Central Database Explorer</h1>
+                <div style="display:flex; gap:1rem;">
+                    <button class="btn-primary" onclick="window.openServerModal()"><i data-lucide="plus" size="14"></i> Add Master Server</button>
+                    <button class="btn-secondary" onclick="window.refreshUI()"><i data-lucide="refresh-cw" size="14"></i> Sync All</button>
+                </div>
+            </div>
+
+            <div class="filter-bar" style="margin-bottom: 1.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <i data-lucide="search" size="18" style="color:var(--accent-color);"></i>
+                    <input type="text" id="dbSearchInput" placeholder="Search Master DB..." oninput="window.renderDatabase()" style="width:300px; padding:0.4rem 0.8rem; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:white; font-size:0.8rem;">
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">Team:</span>
+                    <select id="dbTeamFilter" onchange="window.renderDatabase()"><option value="all">All Teams</option></select>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">Blacklist:</span>
+                    <select id="dbBlacklistFilter" onchange="window.renderDatabase()">
+                        <option value="all">All Status</option>
+                        <option value="CLEAN">Clean Only</option>
+                        <option value="LISTED">Listed Only</option>
+                        <option value="PENDING">Pending</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card-container" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color);">
+                <table class="server-table" style="margin:0;">
+                    <thead>
+                        <tr>
+                            <th>Server</th>
+                            <th>IP / Domain</th>
+                            <th>Team</th>
+                            <th>Owner</th>
+                            <th>Blacklist Status</th>
+                            <th>RDNS</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dbTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div id="teamView" class="view" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <h1 style="font-family: 'Outfit';">Infrastructure Management</h1>
@@ -1529,7 +1577,14 @@
             const idx = window.servers.findIndex(s => s.id === id); 
             if(idx > -1) window.servers[idx] = data; 
             else window.servers.push(data);
-            window.saveData(); window.closeServerModal();
+            window.saveData(); 
+            window.closeServerModal();
+            
+            // Auto-trigger blacklist scan for new servers
+            if(idx === -1) {
+                const tid = `${data.id}_${(data.ip || '').split(/[\s\n,]+/)[0]}`;
+                if(window.checkSingleIp) window.checkSingleIp(tid);
+            }
         };
 
         window.runBulkDnsScan = async function() {
@@ -1693,6 +1748,17 @@
                     const id = idKey.replace('team', '');
                     return `<option value="${id}" ${id === teamFilterVal ? 'selected' : ''}>${name}</option>`;
                 }).join('');
+
+            // Populate Database Team Filter
+            const dbTeamFilterEl = document.getElementById('dbTeamFilter');
+            if(dbTeamFilterEl) {
+                const dbTeamVal = dbTeamFilterEl.value;
+                dbTeamFilterEl.innerHTML = '<option value="all">All Teams</option>' + 
+                    Object.entries(window.teamNames).map(([idKey, name]) => {
+                        const id = idKey.replace('team', '');
+                        return `<option value="${id}" ${id === dbTeamVal ? 'selected' : ''}>${name}</option>`;
+                    }).join('');
+            }
 
             const ownerFilter = document.getElementById('globalOwnerFilter').value;
             const owners = [...new Set(window.servers.map(s => s.owner).filter(o => o))];
@@ -2156,6 +2222,7 @@
             if(v === 'tracking') window.renderTrackingTable();
             if(v === 'domainBlacklist') window.renderDomainTable();
             if(v === 'team') window.renderTeamStats();
+            if(v === 'database') window.renderDatabase();
             if(v === 'remarques') window.renderNoteList();
         };
 
@@ -2184,6 +2251,51 @@
         };
 
         window.toggleTools = function(el) { window.toggleSubmenu('toolsSubmenu', el); };
+
+        window.renderDatabase = function() {
+            const tbody = document.getElementById('dbTableBody');
+            if(!tbody) return;
+            
+            const search = document.getElementById('dbSearchInput').value.toLowerCase();
+            const teamF = document.getElementById('dbTeamFilter').value;
+            const blackF = document.getElementById('dbBlacklistFilter').value;
+            
+            let filtered = window.servers.filter(s => {
+                const matchesSearch = s.name.toLowerCase().includes(search) || (s.ip||'').toLowerCase().includes(search) || (s.domain||'').toLowerCase().includes(search) || (s.owner||'').toLowerCase().includes(search);
+                const matchesTeam = teamF === 'all' || s.team == teamF;
+                
+                let matchesBlack = true;
+                if(blackF !== 'all') {
+                    const tid = `${s.id}_${(s.ip || '').split(/[\s\n,]+/)[0]}`;
+                    const trk = (window.trackingData || {})[tid] || { status: 'PENDING' };
+                    matchesBlack = trk.status === blackF;
+                }
+                
+                return matchesSearch && matchesTeam && matchesBlack;
+            });
+
+            tbody.innerHTML = filtered.map(s => {
+                const tid = `${s.id}_${(s.ip || '').split(/[\s\n,]+/)[0]}`;
+                const trk = (window.trackingData || {})[tid] || { status: 'PENDING', color: '#6b7280' };
+                const rdns = (window.rdnsData || {})[s.id] || { status: 'NONE', color: '#6b7280' };
+                const teamName = window.teamNames[`team${s.team}`] || `Team ${s.team}`;
+                
+                return `<tr>
+                    <td style="font-weight:600;">${s.name}</td>
+                    <td style="font-size:0.75rem; color:var(--text-secondary); max-width:200px; overflow:hidden; text-overflow:ellipsis;">${s.ip}<br>${s.domain}</td>
+                    <td><span style="font-size:0.7rem; background:rgba(99,102,241,0.1); padding:2px 6px; border-radius:4px;">${teamName}</span></td>
+                    <td>${s.owner || '-'}</td>
+                    <td><span style="color:${trk.color}; font-weight:bold; font-size:0.7rem; border:1px solid ${trk.color}44; padding:2px 6px; border-radius:4px;">${trk.status}</span></td>
+                    <td><span style="color:${rdns.color}; font-size:0.7rem;">${rdns.status}</span></td>
+                    <td><div style="display:flex; gap:5px; justify-content:flex-end;">
+                        <button onclick="window.editServer('${s.id}')">Edit</button>
+                        <button onclick="window.checkSingleIp('${tid}')" style="background:rgba(16,185,129,0.1); color:#10b981; border-color:rgba(16,185,129,0.3);">Check</button>
+                    </div></td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--text-secondary);">No servers matching filters.</td></tr>';
+            
+            if(window.lucide) lucide.createIcons();
+        };
 
         window.renderHistory = function() {}; // Feature removed
 
