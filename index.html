@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WMN3 | Premium Admin Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest?v=1.0.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -919,7 +919,7 @@
                             if(bodyEl && !bodyEl.matches(':focus')) bodyEl.value = note.content;
                         }
                     }
-                    window.renderNoteList();
+                    if(window.renderNoteList) window.renderNoteList();
                     
                     const newTrackingStr = JSON.stringify(rData.tracking || {});
                     if (JSON.stringify(window.trackingData) !== newTrackingStr) {
