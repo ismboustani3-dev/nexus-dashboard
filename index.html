@@ -214,15 +214,6 @@
             <div class="card-container"><h2>Overview</h2><div id="userStatsList"></div></div>
         </div>
         <div id="projectsView" class="view" style="display:none;">
-            <!-- Data Recovery Utility -->
-            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:1.5rem; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h3 style="color:#ef4444; margin:0; font-size:1rem;">⚠️ Database Recovery Utility</h3>
-                    <p style="color:rgba(255,255,255,0.6); margin:5px 0 0 0; font-size:0.8rem;">If your Firebase data was lost, we can try to recover it from your browser's local storage.</p>
-                </div>
-                <button class="btn-primary" onclick="window.tryLocalRecovery()" style="background:#ef4444; border:none; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">Recover from Browser</button>
-            </div>
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <h1 style="font-family: 'Outfit';">Project Management</h1>
                 <div style="display:flex; gap:1rem;">
@@ -862,14 +853,12 @@
 
         window.saveData = function() {
             db.ref('nexus').set({
-                projects: window.projects || [],
-                servers: window.servers || [],
-                teams: window.teamNames || { team1: 'Team 1', team2: 'Team 2' },
-                settings: window.settings || { adminName: 'Admin', adminPass: 'admin', users: [] },
-                tracking: window.trackingData || {},
-                history: window.deletionHistory || [],
-                remarques: window.remarques || [],
-                rdnsData: window.rdnsData || {}
+                projects: window.projects,
+                servers: window.servers,
+                teams: window.teamNames,
+                settings: window.settings,
+                tracking: window.trackingData,
+                history: window.deletionHistory || []
             }).then(() => {
                 const saveBtn = document.querySelector('#trackingView .bl-btn-primary');
                 if(saveBtn && saveBtn.innerHTML.includes('Save')) {
@@ -883,31 +872,6 @@
             });
         };
 
-        window.tryLocalRecovery = function() {
-            try {
-                const lp = localStorage.getItem('nexus_projects');
-                const ls = localStorage.getItem('nexus_servers');
-                const lt = localStorage.getItem('nexus_teams');
-                
-                if(!lp && !ls) {
-                    alert("No local data found in this browser. Please try on the computer where you last saw the projects.");
-                    return;
-                }
-                
-                if(confirm("Found some local data! Should we restore it and sync to Firebase? This will overwrite empty data.")) {
-                    if(lp) window.projects = JSON.parse(lp);
-                    if(ls) window.servers = JSON.parse(ls);
-                    if(lt) window.teamNames = JSON.parse(lt);
-                    
-                    window.saveData();
-                    window.refreshUI();
-                    alert("Recovery successful! Data synced back to Firebase.");
-                }
-            } catch(e) {
-                alert("Recovery error: " + e.message);
-            }
-        };
-
         window.loadData = function() {
             const loader = document.createElement('div');
             loader.id = 'fbLoader';
@@ -916,7 +880,6 @@
 
             db.ref('nexus').once('value').then((snap) => {
                 const data = snap.val() || {};
-                console.log("Firebase Data Loaded:", data);
                 window.projects = data.projects || [];
                 window.servers = data.servers || [];
                 window.teamNames = data.teams || { team1: 'Team 1', team2: 'Team 2' };
@@ -924,40 +887,30 @@
                 window.trackingData = data.tracking || {};
                 window.rdnsData = data.rdnsData || {};
                 window.deletionHistory = data.history || [];
-                window.remarques = data.remarques || [];
                 
                 window.currentUser.name = window.settings.adminName;
                 document.getElementById('setAdminName').value = window.settings.adminName;
+                document.getElementById('setHetrixKey').value = window.settings.hetrixKey || '';
+                document.getElementById('setSpamhausToken').value = window.settings.spamhausToken || '';
 
                 const lEl = document.getElementById('fbLoader');
                 if(lEl) lEl.remove();
                 
                 window.refreshUI();
+                if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
                 
-                // Add a small debug monitor
-                const monitor = document.createElement('div');
-                monitor.style = "position:fixed; bottom:20px; right:20px; background:rgba(0,0,0,0.8); border:1px solid #6366f1; padding:10px; border-radius:8px; font-size:0.65rem; color:#6366f1; z-index:9999; pointer-events:none; font-family:monospace;";
-                monitor.id = "dataMonitor";
-                document.body.appendChild(monitor);
-                
-                const updateMonitor = () => {
-                    monitor.innerHTML = `DATABASE MONITOR<br>Projects: ${window.projects.length}<br>Servers: ${window.servers.length}<br>Remarques: ${window.remarques.length}<br>Last Sync: ${new Date().toLocaleTimeString()}`;
-                };
-                updateMonitor();
-                
+                // Set up real-time listener
                 db.ref('nexus').on('value', (snapshot) => {
                     const rData = snapshot.val() || {};
-                    console.log("Firebase Real-time Update Received");
                     window.projects = rData.projects || [];
                     window.servers = rData.servers || [];
                     window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
                     window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                     window.deletionHistory = rData.history || [];
                     window.rdnsData = rData.rdnsData || {};
-                    window.remarques = rData.remarques || [];
+                    window.remarques = rData.remarques || []; // Changed to array
                     
-                    window.refreshUI();
-                                if(window.activeNoteId) {
+                    if(window.activeNoteId) {
                         const note = window.remarques.find(n => n.id === window.activeNoteId);
                         if(note) {
                             const titleEl = document.getElementById('activeNoteTitle');
