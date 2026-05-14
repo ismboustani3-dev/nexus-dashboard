@@ -259,8 +259,6 @@
                     <span style="font-size:0.9rem; color:var(--text-secondary);">Display Team:</span>
                     <select id="teamViewFilter" onchange="window.refreshUI()">
                         <option value="all">All Teams</option>
-                        <option value="1">Team 1</option>
-                        <option value="2">Team 2</option>
                     </select>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
@@ -270,6 +268,7 @@
                         <option value="none">Default</option>
                         <option value="ip_desc">Max IP (High to Low)</option>
                         <option value="ip_asc">Min IP (Low to High)</option>
+                    </select>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.5rem; margin-left: auto; width: 300px;">
                     <i data-lucide="search" size="18" style="color:var(--accent-color);"></i>
@@ -1095,7 +1094,8 @@
                 if (p.length === 4) {
                     // Simple format: team;name;ip;domain
                     let rawTeam = (p[0] || '1').trim().toLowerCase();
-                    let teamNum = rawTeam.includes('2') ? '2' : '1';
+                    let teamNum = rawTeam.replace('team', '').trim();
+                    if(!teamNum) teamNum = '1';
                     window.servers.push({
                         id, team: teamNum, name: (p[1] || '').trim(), ip: (p[2] || '').trim(), domain: (p[3] || '').trim(),
                         status: 'Active', class: '', date: new Date().toLocaleDateString(), noticeDate: '', asn: '', nbrIp: '1', owner: inheritedOwner
@@ -1628,6 +1628,15 @@
                 `;
             }
 
+            // Populate Team Filter
+            const teamFilterEl = document.getElementById('teamViewFilter');
+            const teamFilterVal = teamFilterEl.value;
+            teamFilterEl.innerHTML = '<option value="all">All Teams</option>' + 
+                Object.entries(window.teamNames).map(([idKey, name]) => {
+                    const id = idKey.replace('team', '');
+                    return `<option value="${id}" ${id === teamFilterVal ? 'selected' : ''}>${name}</option>`;
+                }).join('');
+
             const ownerFilter = document.getElementById('globalOwnerFilter').value;
             const owners = [...new Set(window.servers.map(s => s.owner).filter(o => o))];
             const filterEl = document.getElementById('globalOwnerFilter');
@@ -1860,8 +1869,12 @@
                 }
 
                 tg.innerHTML = '';
-            if(teamFilter === 'all' || teamFilter === '1') tg.innerHTML += render(1, window.teamNames.team1);
-            if(teamFilter === 'all' || teamFilter === '2') tg.innerHTML += render(2, window.teamNames.team2);
+            Object.keys(window.teamNames).forEach(tIdKey => {
+                const tId = tIdKey.replace('team', '');
+                if(teamFilter === 'all' || teamFilter === tId) {
+                    tg.innerHTML += render(tId, window.teamNames[tIdKey]);
+                }
+            });
             
             let vP = window.projects || [];
             const projOwnerFilterEl = document.getElementById('projOwnerFilter');
