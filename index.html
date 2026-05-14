@@ -1505,14 +1505,17 @@
                         ` : (domains[0] || '-');
 
                         const rdnsInfo = (window.rdnsData || {})[s.id] || { status: 'PENDING', color: '#6b7280' };
+                        const isScanning = rdnsInfo.status === 'SCANNING...';
                         const rdnsDisplay = `
-                            <div style="display:flex; flex-direction:column; gap:4px; min-width:100px; align-items:center;">
+                            <div style="display:flex; flex-direction:column; gap:4px; min-width:110px; align-items:center;">
                                 <div style="display:flex; align-items:center; gap:4px;">
-                                    <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.65rem; border:1px solid ${rdnsInfo.color}44; padding:1px 4px; border-radius:3px; cursor:pointer;" onclick="window.runSingleRdnsAudit('${s.id}', this)" title="Click to re-scan this server">${rdnsInfo.status}</span>
-                                    ${rdnsInfo.ptr ? `<i data-lucide="info" size="10" title="PTR: ${rdnsInfo.ptr}" style="color:var(--accent-color); cursor:help;"></i>` : ''}
+                                    <span style="color:${rdnsInfo.color}; font-weight:bold; font-size:0.65rem; border:1px solid ${rdnsInfo.color}44; padding:1px 4px; border-radius:3px; cursor:pointer; ${isScanning ? 'opacity:0.6;' : ''}" 
+                                          onclick="window.runSingleRdnsAudit('${s.id}', this)" 
+                                          title="Click to re-scan this server">${rdnsInfo.status}</span>
+                                    ${rdnsInfo.ptr && rdnsInfo.ptr !== 'No PTR Found' ? `<i data-lucide="info" size="10" title="PTR: ${rdnsInfo.ptr}" style="color:var(--accent-color); cursor:help;"></i>` : ''}
                                 </div>
-                                ${rdnsInfo.ptr && rdnsInfo.ptr !== 'No PTR Found' ? `<div style="font-size:0.55rem; color:#94a3b8; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;" title="${rdnsInfo.ptr}">${rdnsInfo.ptr}</div>` : ''}
-                                ${rdnsInfo.date ? `<div style="font-size:0.5rem; color:#4b5563; text-align:center;">${rdnsInfo.date}</div>` : ''}
+                                ${rdnsInfo.ptr && rdnsInfo.ptr !== 'No PTR Found' && !isScanning ? `<div style="font-size:0.55rem; color:#94a3b8; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;" title="${rdnsInfo.ptr}">${rdnsInfo.ptr}</div>` : ''}
+                                ${rdnsInfo.date && !isScanning ? `<div style="font-size:0.5rem; color:#4b5563; text-align:center;">${rdnsInfo.date}</div>` : ''}
                             </div>
                         `;
 
@@ -2263,14 +2266,15 @@
         window.runSingleRdnsAudit = async function(id, el) {
             const s = window.servers.find(x => x.id === id);
             if(!s) return;
-            el.innerHTML = '...';
+            window.rdnsData[id] = { status: 'SCANNING...', color: '#6366f1', ptr: 'Checking...', date: '' };
+            window.refreshUI();
             await window._checkServer(s);
             db.ref('nexus/rdnsData').set(window.rdnsData);
         };
 
         window._checkServer = async (s) => {
-            const ips = (s.ip || '').split(/[,\n;]+/).map(ip => ip.trim()).filter(ip => ip);
-            const domains = (s.domain || '').split(/[,\n;]+/).map(d => d.trim()).filter(d => d);
+            const ips = (s.ip || '').split(/[,\n;]+/).map(ip => ip.trim().toLowerCase()).filter(ip => ip);
+            const domains = (s.domain || '').split(/[,\n;]+/).map(d => d.trim().toLowerCase()).filter(d => d);
             const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             
             if(ips.length === 0 || domains.length === 0) {
@@ -2279,27 +2283,59 @@
                 return;
             }
 
-            try {
-                const fRes = await fetch(`https://dns.google/resolve?name=${domains[0]}&type=A`);
-                const fJson = await fRes.json();
-                const aRecords = (fJson.Answer || []).filter(a => a.type === 1);
-                const aMatches = aRecords.some(a => a.data === ips[0]);
+            let forwardOk = false;
+            let rdnsOk = false;
+            let ptrFound = null;
 
-                const revIp = ips[0].split('.').reverse().join('.') + '.in-addr.arpa';
-                const rRes = await fetch(`https://dns.google/resolve?name=${revIp}&type=PTR`);
-                const rJson = await rRes.json();
-                const ptrRecords = (rJson.Answer || []).filter(a => a.type === 12);
-                const ptrValue = ptrRecords.length > 0 ? ptrRecords[0].data.replace(/\.$/, '') : null;
+            try {
+                // For performance, we check the first domain and first IP first, but try to be smart
+                for(let domain of domains) {
+                    const fRes = await fetch(`https://dns.google/resolve?name=${domain}&type=A`);
+                    const fJson = await fRes.json();
+                    const aRecords = (fJson.Answer || []).filter(a => a.type === 1);
+                    if (aRecords.some(a => ips.includes(a.data))) {
+                        forwardOk = true;
+                        break; 
+                    }
+                }
+
+                // Check PTR for all IPs until we find one or finish
+                for(let ip of ips) {
+                    const revIp = ip.split('.').reverse().join('.') + '.in-addr.arpa';
+                    const rRes = await fetch(`https://dns.google/resolve?name=${revIp}&type=PTR`);
+                    const rJson = await rRes.json();
+                    const ptrRecords = (rJson.Answer || []).filter(a => a.type === 12);
+                    
+                    if (ptrRecords.length > 0) {
+                        const ptr = ptrRecords[0].data.replace(/\.$/, '').toLowerCase();
+                        ptrFound = ptr;
+                        // Check if this PTR matches ANY of our domains
+                        if (domains.some(d => ptr === d || ptr.includes(d))) {
+                            rdnsOk = true;
+                            break;
+                        }
+                    }
+                }
                 
                 let status = 'NOT ACTIVE';
                 let color = '#ef4444';
-                if (aMatches) {
-                    status = 'A OK'; color = '#10b981';
-                    if (ptrValue && (ptrValue === domains[0] || ptrValue.includes(domains[0]))) { status = 'RDNS OK'; }
-                    else if (ptrValue) { status = 'PTR MISMATCH'; color = '#f59e0b'; }
+
+                if (rdnsOk) {
+                    status = 'RDNS OK';
+                    color = '#10b981';
+                } else if (forwardOk) {
+                    status = ptrFound ? 'PTR MISMATCH' : 'A OK';
+                    color = ptrFound ? '#f59e0b' : '#10b981';
                 }
-                window.rdnsData[s.id] = { status: status, color: color, ptr: ptrValue || 'No PTR Found', date: now };
+
+                window.rdnsData[s.id] = { 
+                    status: status, 
+                    color: color, 
+                    ptr: ptrFound || 'No PTR Found', 
+                    date: now 
+                };
             } catch (e) {
+                console.error("RDNS Audit Error:", e);
                 window.rdnsData[s.id] = { status: 'ERROR', color: '#f59e0b', date: now };
             }
             window.refreshUI();
