@@ -1459,7 +1459,21 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. HetrixTools API
+                // 1. LOCAL DNSBL PROXY (most reliable - uses server's own DNS resolver)
+                try {
+                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if(data.listed) {
+                            return { listed: true, zone: data.listedOn.join(', ') };
+                        }
+                        return { listed: false };
+                    }
+                } catch (e) {
+                    // Proxy not running, fall through to other methods
+                }
+
+                // 2. HetrixTools API
                 if(hKey) {
                     try {
                         const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
@@ -1472,7 +1486,7 @@
                     } catch (e) { }
                 }
 
-                // 2. Spamhaus SIA API
+                // 3. Spamhaus SIA API
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
@@ -1487,44 +1501,24 @@
                     } catch (e) { }
                 }
 
-                // 3. Native DNSBL via DoH (Google + Cloudflare fallback)
+                // 4. DoH Fallback (limited - many DNSBLs block public resolvers)
                 const zones = [
-                    { name: 'Spamhaus ZEN', zone: 'zen.spamhaus.org' },
-                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
-                    { name: 'Barracuda', zone: 'b.barracudacentral.org' },
                     { name: 'UCEPROTECT-1', zone: 'dnsbl-1.uceprotect.net' },
                     { name: 'DroneRL', zone: 'dnsbl.dronebl.org' },
-                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' },
-                    { name: 'Abuseat CBL', zone: 'cbl.abuseat.org' }
+                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
-                
-                // Try each zone with Google DoH first, then Cloudflare DoH as fallback
-                const dohResolvers = [
-                    (query) => `https://dns.google/resolve?name=${query}&type=A`,
-                    (query) => `https://cloudflare-dns.com/dns-query?name=${query}&type=A`
-                ];
-                
                 for (let z of zones) {
-                    const query = `${revIp}.${z.zone}`;
-                    for (let resolverFn of dohResolvers) {
-                        try {
-                            const resp = await fetch(resolverFn(query), {
-                                headers: { 'Accept': 'application/dns-json' }
-                            });
-                            const dns = await resp.json();
-                            if (dns.Answer && dns.Answer.length > 0) {
-                                const val = dns.Answer[0].data;
-                                // 127.0.0.x = LISTED, 127.255.255.x = access denied/rate limited
-                                if (val.startsWith('127.0.0.')) {
-                                    return { listed: true, zone: z.name };
-                                }
+                    try {
+                        const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
+                        const dns = await resp.json();
+                        if (dns.Answer && dns.Answer.length > 0) {
+                            const val = dns.Answer[0].data;
+                            if (val.startsWith('127.0.0.')) {
+                                return { listed: true, zone: z.name };
                             }
-                            break; // resolver worked, no need for fallback
-                        } catch (e) {
-                            continue; // try next resolver
                         }
-                    }
+                    } catch (e) { }
                 }
                 return { listed: false };
             }
