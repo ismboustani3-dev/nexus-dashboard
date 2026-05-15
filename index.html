@@ -1706,6 +1706,15 @@
             window.saveData();
             alert('API Configurations updated!');
         };
+
+        window.getTodayFormat = function() {
+            const now = new Date();
+            const d = String(now.getDate()).padStart(2, '0');
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+            return `${d}/${m}/${y}`;
+        };
+
         window.handleServerSubmit = function(e) {
             e.preventDefault(); 
             const id = document.getElementById('serverId').value || Date.now().toString();
@@ -1721,7 +1730,8 @@
                 noticeDate: document.getElementById('sNoticeDate').value, 
                 asn: document.getElementById('sAsn').value, 
                 nbrIp: document.getElementById('sNbrIp').value, 
-                team: document.getElementById('sTeam').value 
+                team: document.getElementById('sTeam').value,
+                date: document.getElementById('sDate').value || window.getTodayFormat()
             };
 
             // Smart Auto-Assign Team based on Owner
@@ -2200,7 +2210,7 @@
             
             const srv = window.servers.find(s => s.id === id);
             if(srv) {
-                srv.deleteDate = new Date().toLocaleString();
+                srv.deleteDate = window.getTodayFormat();
                 srv.deleteTimestamp = Date.now();
                 srv.delType = type === 'immediately' ? 'IMMEDIATELY' : 'DATE PAYMENT';
                 srv.payDate = payDate || '-';
@@ -2227,7 +2237,7 @@
             const namesToArchive = raw.split(/\r?\n/).map(n => n.trim().toLowerCase()).filter(n => n);
             const type = document.getElementById('bulkDelType').value;
             const payDate = document.getElementById('bulkDelPaymentDate').value;
-            const nowStr = new Date().toLocaleString();
+            const nowStr = window.getTodayFormat();
             
             let archivedCount = 0;
             const remainingServers = [];
@@ -2289,7 +2299,7 @@
                         ip: '',
                         domain: '',
                         status: 'Active',
-                        date: new Date().toLocaleDateString(),
+                        date: window.getTodayFormat(),
                         owner: owner
                     };
                     window.servers.push(srv);
