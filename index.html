@@ -1715,6 +1715,25 @@
             return `${d}/${m}/${y}`;
         };
 
+        window.fixDateFormat = function(str) {
+            if(!str || str === '-') return '-';
+            // If it's already DD/MM/YYYY (approx check: first part > 12 if slash count=2)
+            // Or just try to parse and re-format if it looks like MM/DD/YYYY
+            const parts = str.split('/');
+            if(parts.length === 3) {
+                // If the second part is > 12, it's definitely NOT MM/DD/YYYY, probably DD/MM/YYYY
+                // If the first part is > 12, it's already DD/MM/YYYY
+                const p1 = parseInt(parts[0]);
+                const p2 = parseInt(parts[1]);
+                if(p1 > 12) return str; // Already DD/MM/YYYY
+                if(p2 > 12) {
+                    // It was MM/DD/YYYY, fix it
+                    return `${parts[1].padStart(2,'0')}/${parts[0].padStart(2,'0')}/${parts[2]}`;
+                }
+            }
+            return str;
+        };
+
         window.handleServerSubmit = function(e) {
             e.preventDefault(); 
             const id = document.getElementById('serverId').value || Date.now().toString();
@@ -2600,7 +2619,7 @@
                             <span style="font-weight:700; color:white;">${s.name}</span>
                         </div>
                     </td>
-                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.date || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary);">${window.fixDateFormat(s.date)}</td>
                     <td><div style="display:flex; gap:5px; justify-content:flex-end;">
                         <button onclick="window.editServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem;">Edit</button>
                         <button class="danger" onclick="window.deleteServer('${s.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:2px 8px; font-size:0.7rem;">Del</button>
@@ -2625,7 +2644,7 @@
                     <td style="font-size:0.7rem; color:var(--text-secondary);">${s.owner || '-'}</td>
                     <td style="font-size:0.75rem; font-weight:600; color:#ef4444;">${s.name}</td>
                     <td style="font-size:0.65rem; color:#94a3b8;">${s.delType || 'IMMEDIATELY'} ${s.payDate && s.payDate !== '-' ? `(${s.payDate})` : ''}</td>
-                    <td style="text-align:right; font-size:0.65rem; color:var(--text-secondary);">${s.deleteDate || '-'}</td>
+                    <td style="text-align:right; font-size:0.65rem; color:var(--text-secondary);">${window.fixDateFormat(s.deleteDate)}</td>
                 </tr>`;
 
                 t1DelBody.innerHTML = delT1.map(delRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
