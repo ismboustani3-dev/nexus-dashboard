@@ -126,6 +126,13 @@
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #6366f1; }
         input:checked + .slider:before { transform: translateX(20px); }
+        
+        .switch-small { position: relative; display: inline-block; width: 36px; height: 20px; }
+        .switch-small input { opacity: 0; width: 0; height: 0; }
+        .slider-small { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .4s; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .slider-small:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider-small { background-color: var(--accent-color); }
+        input:checked + .slider-small:before { transform: translateX(16px); }
 
         .btn-dns-start { width: 100%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 1.5rem; transition: transform 0.2s, box-shadow 0.2s; }
         .btn-dns-start:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
@@ -674,10 +681,18 @@
                 </div>
             </div>
             
-            <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px;">
+             <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px; align-items:center;">
                 <button class="bl-btn bl-btn-primary" onclick="window.saveData()"><i data-lucide="save"></i> Save Changes</button>
                 <button class="bl-btn bl-btn-success" onclick="window.exportTrackingCSV()"><i data-lucide="download"></i> Export CSV</button>
                 <button id="autoScanBtn" class="bl-btn" onclick="window.runAutoScan()" style="background:var(--accent-color); color:black; border:none; font-weight:700;"><i data-lucide="zap"></i> Run Auto Scan</button>
+                
+                <div style="margin-left:auto; display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.05); padding:8px 15px; border-radius:10px; border:1px solid var(--border-color);">
+                    <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Schedule (09:00 AM)</span>
+                    <label class="switch-small">
+                        <input type="checkbox" id="autoScanToggle" onchange="window.toggleAutoScanSchedule(this.checked)">
+                        <span class="slider-small"></span>
+                    </label>
+                </div>
             </div>
 
             <div id="scanProgressBarContainer" style="display:none; margin-bottom: 1rem; background:rgba(255,255,255,0.05); border-radius:10px; padding:15px; border:1px solid rgba(0,242,254,0.1);">
@@ -1183,6 +1198,12 @@
                 
                 window._dataLoaded = true; // ✅ Data confirmed loaded — saveData now allowed
                 window.refreshUI();
+                
+                // Initialize toggles from settings
+                if(document.getElementById('autoScanToggle')) {
+                    document.getElementById('autoScanToggle').checked = !!window.settings.enableAutoScan;
+                }
+                
                 if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
                 
                 // Set up real-time listener
@@ -1756,6 +1777,11 @@
                 const dateStr = now.toDateString(); 
                 
                 if(timeStr === "09:00" && window.lastAutoScanDate !== dateStr) {
+                    if(!window.settings.enableAutoScan) {
+                        console.log("SCHEDULED TASK: 09:00 AM reached but Auto-Scan is DISABLED in settings.");
+                        window.lastAutoScanDate = dateStr;
+                        return;
+                    }
                     window.lastAutoScanDate = dateStr;
                     console.log("SCHEDULED TASK: Starting automatic 09:00 AM scan...");
                     
@@ -1770,6 +1796,12 @@
                     })();
                 }
             }, 30000);
+        };
+
+        window.toggleAutoScanSchedule = function(enabled) {
+            window.settings.enableAutoScan = enabled;
+            window.saveData();
+            console.log(`Auto-Scan Schedule 09:00 AM: ${enabled ? 'ENABLED' : 'DISABLED'}`);
         };
 
         window.saveAdminProfile = function(e) {
