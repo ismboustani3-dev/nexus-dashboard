@@ -1473,7 +1473,7 @@
             const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
             const allIPs = [];
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 ips.forEach(ip => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     allIPs.push({ ip, trackId });
@@ -3045,7 +3045,7 @@
             let html = '';
             
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 if (ips.length === 0) ips.push('No IP');
                 
                 ips.forEach((ip, idx) => {
@@ -3088,16 +3088,18 @@
             if(distContainer && distInner) {
                 const types = {};
                 teamServers.forEach(s => {
-                    const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                    const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     ips.forEach(ip => {
                         const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                         const trk = window.trackingData[trackId] || {};
                         const todayVal = (trk[today] || '').toUpperCase().trim();
                         if(todayVal === 'LISTED' && trk.notes) {
                             // Extract type from "Listed: Spamhaus (CSS)"
-                            const match = trk.notes.match(/Listed:\s*(.*)/i);
+                            const match = trk.notes.match(/Listed:\s*([^(\n]+)/i);
                             if(match && match[1]) {
-                                const type = match[1].trim();
+                                let type = match[1].trim();
+                                if(type.toLowerCase().includes('spamhaus')) type = 'Spamhaus';
+                                if(type.toLowerCase().includes('hetrix')) type = 'Hetrix';
                                 types[type] = (types[type] || 0) + 1;
                             }
                         }
