@@ -88,19 +88,16 @@
         .ip-badge:hover { background: var(--accent-color); color: black; border-color: transparent; }
         .ip-popover { 
             display: none; 
-            position: absolute; 
-            top: 100%; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            background: rgba(30, 41, 59, 0.95); 
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 12px; 
-            padding: 12px; 
-            z-index: 99999; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); 
-            min-width: 200px; 
-            margin-top: 10px; 
+            position: fixed; 
+            background: rgba(15, 23, 42, 0.98); 
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 16px; 
+            padding: 16px; 
+            z-index: 9999999; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05); 
+            width: 280px; 
+            pointer-events: auto;
         }
         .ip-popover.active { display: block; }
         /* Automatic upward display if space is tight at bottom - optional via JS but let's try CSS first if possible */
@@ -2281,22 +2278,31 @@
             if(isOpening) {
                 popover.classList.add('active');
                 
-                // Position Check
-                const rect = popover.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
+                // Calculate dynamic position
+                const badgeRect = el.getBoundingClientRect();
+                const popRect = popover.getBoundingClientRect();
                 
-                // If it overflows the bottom of the screen
-                if(rect.bottom > windowHeight - 20) {
-                    popover.style.top = 'auto';
-                    popover.style.bottom = '100%';
-                    popover.style.marginBottom = '15px';
-                    popover.style.marginTop = '0';
+                // Horizontal Centering
+                let left = badgeRect.left + (badgeRect.width / 2) - (popRect.width / 2);
+                // Prevent going off screen
+                left = Math.max(10, Math.min(left, window.innerWidth - popRect.width - 10));
+                
+                // Vertical check
+                const spaceBelow = window.innerHeight - badgeRect.bottom;
+                const spaceAbove = badgeRect.top;
+                
+                if (spaceBelow < popRect.height + 20 && spaceAbove > spaceBelow) {
+                    // Show Above
+                    popover.style.top = (badgeRect.top - popRect.height - 12) + 'px';
                 } else {
-                    popover.style.top = '100%';
-                    popover.style.bottom = 'auto';
-                    popover.style.marginBottom = '0';
-                    popover.style.marginTop = '10px';
+                    // Show Below
+                    popover.style.top = (badgeRect.bottom + 12) + 'px';
                 }
+                
+                popover.style.left = left + 'px';
+                popover.style.transform = 'none'; // Clear previous transform
+                popover.style.marginTop = '0';
+                popover.style.marginBottom = '0';
             } else {
                 popover.classList.remove('active');
             }
