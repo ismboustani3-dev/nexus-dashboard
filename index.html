@@ -250,6 +250,35 @@
                 </div>
             </div>
 
+            <!-- Bulk Management Tools Bar -->
+            <div class="card-container" style="margin-bottom:2rem; border:1px solid rgba(0,242,254,0.1); background:rgba(0,0,0,0.2); padding:0;">
+                <div onclick="window.toggleBulkTools()" style="padding:1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:rgba(0,242,254,0.05);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="wrench" size="18" style="color:#00f2fe;"></i>
+                        <span style="font-family:'Outfit'; font-weight:600; font-size:1rem;">Bulk Management Tools</span>
+                    </div>
+                    <i data-lucide="chevron-down" id="bulkToolsArrow" size="18" style="transition:0.3s;"></i>
+                </div>
+                <div id="bulkToolsContent" style="padding:1.5rem; display:grid; grid-template-columns: 1fr 1fr; gap:2rem; border-top:1px solid rgba(0,242,254,0.1);">
+                    <!-- Quick Add -->
+                    <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:12px; border:1px solid var(--border-color);">
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;">Quick Add (Format: <code style="color:#00f2fe;">team;name;ip;domain</code>)</p>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <textarea id="quickAddInput" style="flex:1; height:60px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="1;SRV_001;1.1.1.1;site.com"></textarea>
+                            <button class="btn-primary" onclick="window.handleQuickAdd()" style="height:60px; padding:0 20px; background:linear-gradient(135deg, #00f2fe, #00c6ff); color:black; font-weight:700;">Add</button>
+                        </div>
+                    </div>
+                    <!-- Quick Delete -->
+                    <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:12px; border:1px solid var(--border-color);">
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;">Quick Delete (Paste Server Names, one per line)</p>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <textarea id="quickDeleteInput" style="flex:1; height:60px; background:rgba(0,0,0,0.3); border:1px solid #ef444433; color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="srv_001&#10;srv_002"></textarea>
+                            <button class="btn-primary" onclick="window.handleQuickDelete()" style="height:60px; padding:0 20px; background:#ef4444; color:white; font-weight:700;">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
                 <!-- Team 1 Column -->
                 <div class="card-container" style="padding:0; overflow:hidden;">
@@ -2224,6 +2253,78 @@
                 document.getElementById('bulkArchiveModalOverlay').style.display = 'none';
             } else {
                 alert("No matching servers found for the names provided.");
+            }
+        };
+
+        window.toggleBulkTools = function() {
+            const content = document.getElementById('bulkToolsContent');
+            const arrow = document.getElementById('bulkToolsArrow');
+            const isHidden = content.style.display === 'none';
+            content.style.display = isHidden ? 'grid' : 'none';
+            arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-180deg)';
+        };
+
+        window.handleQuickAdd = function() {
+            const raw = document.getElementById('quickAddInput').value.trim();
+            if(!raw) return;
+            const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+            let count = 0;
+            lines.forEach(line => {
+                const parts = line.split(';');
+                if(parts.length >= 2) {
+                    const team = parts[0] || '1';
+                    const name = parts[1];
+                    const ip = parts[2] || '';
+                    const domain = parts[3] || '';
+                    
+                    const srv = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                        team: team,
+                        name: name,
+                        ip: ip,
+                        domain: domain,
+                        status: 'Active',
+                        owner: team == '1' ? 'REDA' : (team == '2' ? 'KHALID' : '')
+                    };
+                    window.servers.push(srv);
+                    count++;
+                }
+            });
+            if(count > 0) {
+                window.saveData();
+                window.refreshUI();
+                document.getElementById('quickAddInput').value = '';
+                alert(`Added ${count} servers!`);
+            }
+        };
+
+        window.handleQuickDelete = function() {
+            const raw = document.getElementById('quickDeleteInput').value.trim();
+            if(!raw) return;
+            const names = raw.split(/\r?\n/).map(n => n.trim().toLowerCase()).filter(n => n);
+            let count = 0;
+            const remaining = [];
+            const nowStr = new Date().toLocaleString();
+            
+            window.servers.forEach(srv => {
+                if(names.includes(srv.name.toLowerCase().trim())) {
+                    srv.deleteDate = nowStr;
+                    srv.deleteTimestamp = Date.now();
+                    srv.delType = 'IMMEDIATELY';
+                    srv.payDate = '-';
+                    if(!window.deletedServers) window.deletedServers = [];
+                    window.deletedServers.push(srv);
+                    count++;
+                } else {
+                    remaining.push(srv);
+                }
+            });
+            if(count > 0) {
+                window.servers = remaining;
+                window.saveData();
+                window.refreshUI();
+                document.getElementById('quickDeleteInput').value = '';
+                alert(`Archived ${count} servers!`);
             }
         };
 
