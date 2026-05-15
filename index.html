@@ -262,10 +262,10 @@
                 <div id="bulkToolsContent" style="padding:1.5rem; display:grid; grid-template-columns: 1fr 1fr; gap:2rem; border-top:1px solid rgba(0,242,254,0.1);">
                     <!-- Quick Add -->
                     <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:12px; border:1px solid var(--border-color);">
-                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;">Quick Add (Format: <code style="color:#00f2fe;">Owner;Name Server</code>)</p>
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;">Quick Add (Line 1: <code style="color:#00f2fe;">Owner</code>, Following: <code style="color:#00f2fe;">Names</code>)</p>
                         <div style="display:flex; gap:10px; align-items:flex-end;">
-                            <textarea id="quickAddInput" style="flex:1; height:60px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="REDA;srv_001&#10;KHALID;srv_002"></textarea>
-                            <button class="btn-primary" onclick="window.handleQuickAdd()" style="height:60px; padding:0 20px; background:linear-gradient(135deg, #00f2fe, #00c6ff); color:black; font-weight:700;">Add</button>
+                            <textarea id="quickAddInput" style="flex:1; height:80px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="REDA&#10;srv_001&#10;srv_002"></textarea>
+                            <button class="btn-primary" onclick="window.handleQuickAdd()" style="height:80px; padding:0 20px; background:linear-gradient(135deg, #00f2fe, #00c6ff); color:black; font-weight:700;">Add</button>
                         </div>
                     </div>
                     <!-- Quick Delete -->
@@ -2302,37 +2302,36 @@
             const raw = document.getElementById('quickAddInput').value.trim();
             if(!raw) return;
             const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+            if(lines.length < 2) return alert("Please provide Owner on line 1 and at least one Server Name on following lines.");
+
+            const owner = lines[0];
+            const serverNames = lines.slice(1);
             let count = 0;
-            lines.forEach(line => {
-                const parts = line.split(';');
-                if(parts.length >= 2) {
-                    const owner = parts[0].trim();
-                    const name = parts[1].trim();
-                    
-                    let team = '1';
-                    const ownerLower = owner.toLowerCase();
-                    if(ownerLower === 'khalid') team = '2';
-                    else if(ownerLower === 'reda') team = '1';
-                    
-                    const srv = {
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                        team: team,
-                        name: name,
-                        ip: '',
-                        domain: '',
-                        status: 'Active',
-                        date: window.getTodayFormat(),
-                        owner: owner
-                    };
-                    window.servers.push(srv);
-                    count++;
-                }
+
+            let team = '1';
+            const ownerLower = owner.toLowerCase();
+            if(ownerLower === 'khalid') team = '2';
+            else if(ownerLower === 'reda') team = '1';
+
+            serverNames.forEach(name => {
+                const srv = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                    team: team,
+                    name: name,
+                    ip: '',
+                    domain: '',
+                    status: 'Active',
+                    date: window.getTodayFormat(),
+                    owner: owner
+                };
+                window.servers.push(srv);
+                count++;
             });
             if(count > 0) {
                 window.saveData();
                 window.refreshUI();
                 document.getElementById('quickAddInput').value = '';
-                alert(`Added ${count} servers!`);
+                alert(`Added ${count} servers for ${owner}!`);
             }
         };
 
