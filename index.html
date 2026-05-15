@@ -168,6 +168,7 @@
                     <li onclick="window.switchView('dns')">• DNS Scanner</li>
                     <li onclick="window.switchView('extraction')">• Extraction</li>
                     <li onclick="window.switchView('ipProvider')">• IP Provider</li>
+                    <li onclick="window.openBulkArchiveModal()">• Bulk Archive</li>
                     <li onclick="window.switchView('deploy')">• Deploy</li>
                     <li onclick="window.switchView('dnsGenerator')">• DNS Generator</li>
                 </ul>
@@ -1004,6 +1005,8 @@
     
     <div class="modal-overlay" id="masterImportModalOverlay"><div class="modal"><h2>Master Import (Database)</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Format: <strong>Owner;SERVER</strong></p><div class="form-group"><label>Team</label><select id="masterImportTeam"><option value="1">REDA</option><option value="2">KHALID</option></select></div><div class="import-box" onclick="document.getElementById('masterFileInput').click()"><i data-lucide="file-spreadsheet" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="masterFileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="masterImportText" style="width:100%; height:150px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Owner;ServerName1&#10;Owner2;ServerName2"></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeMasterImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleMasterImport()">Process Import</button></div></div></div>
     <div class="modal-overlay" id="deleteConfirmModalOverlay"><div class="modal" style="max-width:400px;"><h2>Archive Server</h2><p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1.5rem;">How should this server be declared for removal?</p><input type="hidden" id="deleteServerId"><div class="form-group"><label>Declaration Type</label><select id="delType" onchange="document.getElementById('delDateGroup').style.display = this.value === 'payment' ? 'block' : 'none'"><option value="immediately">Immediately</option><option value="payment">On Date Payment</option></select></div><div class="form-group" id="delDateGroup" style="display:none; margin-top:1rem;"><label>Payment Date</label><input type="date" id="delPaymentDate" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%;"></div><div class="modal-actions" style="margin-top:2rem;"><button type="button" class="btn-secondary" onclick="document.getElementById('deleteConfirmModalOverlay').style.display='none'">Cancel</button><button class="btn-primary" style="background:#ef4444;" onclick="window.confirmArchiveServer()">Confirm Archive</button></div></div></div>
+
+    <div class="modal-overlay" id="bulkArchiveModalOverlay"><div class="modal"><h2>Bulk Archive Tool</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Paste server names (one per line) to archive them all at once.</p><div class="form-group"><label>List of Server Names</label><textarea id="bulkArchiveInput" style="width:100%; height:150px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="s_wmn3_2156&#10;s_wmn3_2158"></textarea></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;"><div class="form-group"><label>Declaration Type</label><select id="bulkDelType" onchange="document.getElementById('bulkDelDateGroup').style.display = this.value === 'payment' ? 'block' : 'none'"><option value="immediately">Immediately</option><option value="payment">On Date Payment</option></select></div><div class="form-group" id="bulkDelDateGroup" style="display:none;"><label>Payment Date</label><input type="date" id="bulkDelPaymentDate" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%;"></div></div><div class="modal-actions" style="margin-top:2rem;"><button type="button" class="btn-secondary" onclick="document.getElementById('bulkArchiveModalOverlay').style.display='none'">Cancel</button><button class="btn-primary" style="background:#ef4444;" onclick="window.handleBulkArchive()">Execute Bulk Archive</button></div></div></div>
 
     <script>
         const firebaseConfig = {
@@ -2171,6 +2174,48 @@
                 window.saveData();
                 window.refreshUI();
                 document.getElementById('deleteConfirmModalOverlay').style.display = 'none';
+            }
+        };
+
+        window.openBulkArchiveModal = function() {
+            document.getElementById('bulkArchiveInput').value = '';
+            document.getElementById('bulkArchiveModalOverlay').style.display = 'flex';
+        };
+
+        window.handleBulkArchive = function() {
+            const raw = document.getElementById('bulkArchiveInput').value.trim();
+            if(!raw) return alert("Please enter at least one server name.");
+            
+            const namesToArchive = raw.split(/\r?\n/).map(n => n.trim().toLowerCase()).filter(n => n);
+            const type = document.getElementById('bulkDelType').value;
+            const payDate = document.getElementById('bulkDelPaymentDate').value;
+            const nowStr = new Date().toLocaleString();
+            
+            let archivedCount = 0;
+            const remainingServers = [];
+            
+            window.servers.forEach(srv => {
+                if(namesToArchive.includes(srv.name.toLowerCase().trim())) {
+                    srv.deleteDate = nowStr;
+                    srv.delType = type === 'immediately' ? 'IMMEDIATELY' : 'DATE PAYMENT';
+                    srv.payDate = payDate || '-';
+                    
+                    if(!window.deletedServers) window.deletedServers = [];
+                    window.deletedServers.push(srv);
+                    archivedCount++;
+                } else {
+                    remainingServers.push(srv);
+                }
+            });
+
+            if(archivedCount > 0) {
+                window.servers = remainingServers;
+                window.saveData();
+                window.refreshUI();
+                alert(`Successfully archived ${archivedCount} server(s).`);
+                document.getElementById('bulkArchiveModalOverlay').style.display = 'none';
+            } else {
+                alert("No matching servers found for the names provided.");
             }
         };
 
