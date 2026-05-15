@@ -338,7 +338,8 @@
                                 <th>Owner</th>
                                 <th>Server Name</th>
                                 <th>Type / Pay Date</th>
-                                <th style="text-align:right;">Archived At</th>
+                                <th>Archived At</th>
+                                <th style="text-align:right;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="dbT1DelBody"></tbody>
@@ -1044,6 +1045,8 @@
     <div class="modal-overlay" id="deleteConfirmModalOverlay"><div class="modal" style="max-width:400px;"><h2>Archive Server</h2><p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1.5rem;">How should this server be declared for removal?</p><input type="hidden" id="deleteServerId"><div class="form-group"><label>Declaration Type</label><select id="delType" onchange="document.getElementById('delDateGroup').style.display = this.value === 'payment' ? 'block' : 'none'"><option value="immediately">Immediately</option><option value="payment">On Date Payment</option></select></div><div class="form-group" id="delDateGroup" style="display:none; margin-top:1rem;"><label>Payment Date</label><input type="date" id="delPaymentDate" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%;"></div><div class="modal-actions" style="margin-top:2rem;"><button type="button" class="btn-secondary" onclick="document.getElementById('deleteConfirmModalOverlay').style.display='none'">Cancel</button><button class="btn-primary" style="background:#ef4444;" onclick="window.confirmArchiveServer()">Confirm Archive</button></div></div></div>
 
     <div class="modal-overlay" id="bulkArchiveModalOverlay"><div class="modal"><h2>Bulk Archive Tool</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Paste server names (one per line) to archive them all at once.</p><div class="form-group"><label>List of Server Names</label><textarea id="bulkArchiveInput" style="width:100%; height:150px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="s_wmn3_2156&#10;s_wmn3_2158"></textarea></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;"><div class="form-group"><label>Declaration Type</label><select id="bulkDelType" onchange="document.getElementById('bulkDelDateGroup').style.display = this.value === 'payment' ? 'block' : 'none'"><option value="immediately">Immediately</option><option value="payment">On Date Payment</option></select></div><div class="form-group" id="bulkDelDateGroup" style="display:none;"><label>Payment Date</label><input type="date" id="bulkDelPaymentDate" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%;"></div></div><div class="modal-actions" style="margin-top:2rem;"><button type="button" class="btn-secondary" onclick="document.getElementById('bulkArchiveModalOverlay').style.display='none'">Cancel</button><button class="btn-primary" style="background:#ef4444;" onclick="window.handleBulkArchive()">Execute Bulk Archive</button></div></div></div>
+
+    <div class="modal-overlay" id="editHistoryModalOverlay"><div class="modal" style="max-width:400px;"><h2>Edit Declaration</h2><input type="hidden" id="editHistoryId"><div class="form-group"><label>Declaration Type</label><select id="editDelType" onchange="document.getElementById('editDelDateGroup').style.display = this.value === 'payment' ? 'block' : 'none'"><option value="immediately">Immediately</option><option value="payment">On Date Payment</option></select></div><div class="form-group" id="editDelDateGroup" style="display:none; margin-top:1rem;"><label>Payment Date</label><input type="date" id="editDelPaymentDate" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%;"></div><div class="modal-actions" style="margin-top:2rem;"><button type="button" class="btn-secondary" onclick="document.getElementById('editHistoryModalOverlay').style.display='none'">Cancel</button><button class="btn-primary" onclick="window.saveHistoryEdit()">Update Declaration</button></div></div></div>
 
     <script>
         const firebaseConfig = {
@@ -2363,6 +2366,31 @@
             }
         };
 
+        window.editHistoryServer = function(id) {
+            const srv = window.deletedServers.find(s => s.id === id);
+            if(!srv) return;
+            document.getElementById('editHistoryId').value = id;
+            document.getElementById('editDelType').value = srv.delType === 'DATE PAYMENT' ? 'payment' : 'immediately';
+            document.getElementById('editDelDateGroup').style.display = srv.delType === 'DATE PAYMENT' ? 'block' : 'none';
+            document.getElementById('editDelPaymentDate').value = srv.payDate !== '-' ? srv.payDate : '';
+            document.getElementById('editHistoryModalOverlay').style.display = 'flex';
+        };
+
+        window.saveHistoryEdit = function() {
+            const id = document.getElementById('editHistoryId').value;
+            const type = document.getElementById('editDelType').value;
+            const payDate = document.getElementById('editDelPaymentDate').value;
+            
+            const srv = window.deletedServers.find(s => s.id === id);
+            if(srv) {
+                srv.delType = type === 'immediately' ? 'IMMEDIATELY' : 'DATE PAYMENT';
+                srv.payDate = payDate || '-';
+                window.saveData();
+                window.refreshUI();
+                document.getElementById('editHistoryModalOverlay').style.display = 'none';
+            }
+        };
+
         window.editProject = function(id) {
             const p = window.projects.find(x => x.id === id);
             if(!p) return;
@@ -2641,14 +2669,17 @@
                 const delT2 = (window.deletedServers || []).filter(s => s.team == '2');
 
                 const delRender = (s) => `<tr>
-                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.owner || '-'}</td>
-                    <td style="font-size:0.75rem; font-weight:600; color:#ef4444;">${s.name}</td>
-                    <td style="font-size:0.65rem; color:#94a3b8;">${s.delType || 'IMMEDIATELY'} ${s.payDate && s.payDate !== '-' ? `(${s.payDate})` : ''}</td>
-                    <td style="text-align:right; font-size:0.65rem; color:var(--text-secondary);">${window.fixDateFormat(s.deleteDate)}</td>
+                    <td style="font-weight:600; color:var(--text-secondary);">${s.owner || '-'}</td>
+                    <td style="font-weight:700; color:white;">${s.name}</td>
+                    <td style="font-size:0.65rem; color:#ef4444; font-weight:600;">${s.delType || 'IMMEDIATELY'}<br><span style="color:var(--text-secondary); font-weight:400;">Pay: ${s.payDate || '-'}</span></td>
+                    <td style="font-size:0.65rem; color:var(--text-secondary);">${window.fixDateFormat(s.deleteDate)}</td>
+                    <td style="text-align:right;">
+                        <button onclick="window.editHistoryServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:var(--accent-color);">Edit</button>
+                    </td>
                 </tr>`;
 
-                t1DelBody.innerHTML = delT1.map(delRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
-                t2DelBody.innerHTML = delT2.map(delRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
+                t1DelBody.innerHTML = delT1.map(delRender).join('') || '<tr><td colspan="5" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
+                t2DelBody.innerHTML = delT2.map(delRender).join('') || '<tr><td colspan="5" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
                 
                 document.getElementById('t1DelCount').innerText = `${delT1.length} Records`;
                 document.getElementById('t2DelCount').innerText = `${delT2.length} Records`;
