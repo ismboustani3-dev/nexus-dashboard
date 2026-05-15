@@ -2504,46 +2504,58 @@
                 const dateEntre = (parts[6] || window.getTodayFormat()).trim();
                 const noticeDate = (parts[7] || '').trim();
                 const asn = (parts[8] || '').trim();
-                
-                const ipsArr = ip.split(/[,\s\n]+/).filter(x => x);
-                const nbrIp = (parts[9] || '').trim() || ipsArr.length.toString();
 
-                const existing = window.servers.find(s => s.name.toLowerCase() === name.toLowerCase());
+                const existingInDB = window.servers.find(s => s.name.toLowerCase() === name.toLowerCase());
+                const target = existingInDB || serverMap[name.toLowerCase()];
 
-                if (existing) {
-                    // Update existing server
-                    existing.ip = ip;
-                    existing.domain = domain;
-                    existing.rdns = rdns;
-                    existing.status = statut;
-                    existing.class = cls;
-                    existing.date = dateEntre;
-                    existing.noticeDate = noticeDate;
-                    existing.asn = asn;
-                    existing.nbrIp = nbrIp;
-                    existing.owner = owner;
-                    existing.team = team;
-                    updatedCount++;
-                } else {
-                    // Check if already in this batch to avoid duplicates within the same import
-                    if (!serverMap[name.toLowerCase()]) {
-                        serverMap[name.toLowerCase()] = {
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                            team: team,
-                            name: name,
-                            ip: ip,
-                            domain: domain,
-                            rdns: rdns,
-                            status: statut,
-                            class: cls,
-                            date: dateEntre,
-                            noticeDate: noticeDate,
-                            asn: asn,
-                            nbrIp: nbrIp,
-                            owner: owner
-                        };
-                        addedCount++;
+                if (target) {
+                    // MERGE Logic
+                    const mergeValues = (oldStr, newStr) => {
+                        if (!newStr) return oldStr;
+                        if (!oldStr) return newStr;
+                        const oldArr = oldStr.split(/[,\s\n]+/).map(x => x.trim()).filter(x => x);
+                        const newArr = newStr.split(/[,\s\n]+/).map(x => x.trim()).filter(x => x);
+                        const merged = [...new Set([...oldArr, ...newArr])];
+                        return merged.join('\n');
+                    };
+
+                    target.ip = mergeValues(target.ip, ip);
+                    target.domain = mergeValues(target.domain, domain);
+                    target.rdns = mergeValues(target.rdns, rdns);
+                    
+                    // Update other fields only if provided
+                    if (statut !== 'Active') target.status = statut;
+                    if (cls) target.class = cls;
+                    if (dateEntre !== window.getTodayFormat()) target.date = dateEntre;
+                    if (noticeDate) target.noticeDate = noticeDate;
+                    if (asn) target.asn = asn;
+                    
+                    // Recalculate nbrIp
+                    const finalIps = target.ip.split(/[,\s\n]+/).filter(x => x);
+                    target.nbrIp = finalIps.length.toString();
+                    
+                    if (existingInDB) {
+                        updatedCount++;
                     }
+                } else {
+                    // Create NEW in this batch
+                    const ipsArr = ip.split(/[,\s\n]+/).filter(x => x);
+                    serverMap[name.toLowerCase()] = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                        team: team,
+                        name: name,
+                        ip: ip,
+                        domain: domain,
+                        rdns: rdns,
+                        status: statut,
+                        class: cls,
+                        date: dateEntre,
+                        noticeDate: noticeDate,
+                        asn: asn,
+                        nbrIp: ipsArr.length.toString(),
+                        owner: owner
+                    };
+                    addedCount++;
                 }
             });
             
