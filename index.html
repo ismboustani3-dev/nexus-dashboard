@@ -1487,24 +1487,44 @@
                     } catch (e) { }
                 }
 
-                // 3. Native DNSBL via Google DoH
+                // 3. Native DNSBL via DoH (Google + Cloudflare fallback)
                 const zones = [
                     { name: 'Spamhaus ZEN', zone: 'zen.spamhaus.org' },
                     { name: 'SpamCop', zone: 'bl.spamcop.net' },
-                    { name: 'Barracuda', zone: 'b.barracudacentral.org' }
+                    { name: 'Barracuda', zone: 'b.barracudacentral.org' },
+                    { name: 'UCEPROTECT-1', zone: 'dnsbl-1.uceprotect.net' },
+                    { name: 'DroneRL', zone: 'dnsbl.dronebl.org' },
+                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' },
+                    { name: 'Abuseat CBL', zone: 'cbl.abuseat.org' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
+                
+                // Try each zone with Google DoH first, then Cloudflare DoH as fallback
+                const dohResolvers = [
+                    (query) => `https://dns.google/resolve?name=${query}&type=A`,
+                    (query) => `https://cloudflare-dns.com/dns-query?name=${query}&type=A`
+                ];
+                
                 for (let z of zones) {
-                    try {
-                        const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
-                        const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) {
-                            const val = dns.Answer[0].data;
-                            if (!val.startsWith('127.255.255.')) {
-                                return { listed: true, zone: z.name };
+                    const query = `${revIp}.${z.zone}`;
+                    for (let resolverFn of dohResolvers) {
+                        try {
+                            const resp = await fetch(resolverFn(query), {
+                                headers: { 'Accept': 'application/dns-json' }
+                            });
+                            const dns = await resp.json();
+                            if (dns.Answer && dns.Answer.length > 0) {
+                                const val = dns.Answer[0].data;
+                                // 127.0.0.x = LISTED, 127.255.255.x = access denied/rate limited
+                                if (val.startsWith('127.0.0.')) {
+                                    return { listed: true, zone: z.name };
+                                }
                             }
+                            break; // resolver worked, no need for fallback
+                        } catch (e) {
+                            continue; // try next resolver
                         }
-                    } catch (e) { }
+                    }
                 }
                 return { listed: false };
             }
