@@ -276,10 +276,22 @@
                             <button class="btn-primary" onclick="window.handleQuickDelete()" style="height:60px; padding:0 20px; background:#ef4444; color:white; font-weight:700;">Delete</button>
                         </div>
                     </div>
+                    <!-- Bulk Group Import -->
+                    <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:12px; border:1px solid var(--border-color); grid-column: span 2;">
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;"><strong>Bulk Group Import</strong> — Format: <code style="color:#00f2fe;">SERVERS;Main IP;Domain;RDNS;Statut;Class;DateEntre;Notice Date;ASN;Nbr IP</code></p>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <textarea id="bulkGroupImportInput" style="flex:1; height:100px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="s_wmn3_001;1.1.1.1;domain1.com;rdns1.com;Active;C1;15/05/2026;30/06/2026;AS1234;5&#10;s_wmn3_002;2.2.2.2;domain2.com;;;C2;;;;"></textarea>
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                <select id="bulkGroupTeam" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:8px; font-size:0.75rem;"><option value="1">REDA</option><option value="2">KHALID</option></select>
+                                <input type="text" id="bulkGroupOwner" placeholder="Owner" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:8px; font-size:0.75rem;">
+                                <button class="btn-primary" onclick="window.handleBulkGroupImport()" style="padding:8px 20px; background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700;">Import</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+            <div style="display:grid; grid-template-columns: 1fr; gap:2rem;">
                 <!-- Team 1 Column -->
                 <div class="card-container" style="padding:0; overflow:hidden;">
                     <div style="background:rgba(99,102,241,0.1); padding:1rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
@@ -289,17 +301,26 @@
                             <div style="text-align:right;"><span style="display:block; font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase;">Month Del.</span><span id="t1MonthDel" style="font-weight:700; color:#ef4444;">0</span></div>
                         </div>
                     </div>
-                    <table class="server-table" style="margin:0;">
+                    <div style="overflow-x:auto;">
+                    <table class="server-table" style="margin:0; min-width:1100px;">
                         <thead>
                             <tr>
-                                <th>Owner</th>
-                                <th>Server Name</th>
-                                <th>Entry Date</th>
+                                <th>SERVERS</th>
+                                <th>Main IP</th>
+                                <th>Domain</th>
+                                <th>RDNS</th>
+                                <th>Statut</th>
+                                <th>Class</th>
+                                <th>DateEntre</th>
+                                <th>Notice Date</th>
+                                <th>ASN</th>
+                                <th>Nbr IP</th>
                                 <th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="dbT1Body"></tbody>
                     </table>
+                    </div>
                 </div>
 
                 <!-- Team 2 Column -->
@@ -311,17 +332,26 @@
                             <div style="text-align:right;"><span style="display:block; font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase;">Month Del.</span><span id="t2MonthDel" style="font-weight:700; color:#ef4444;">0</span></div>
                         </div>
                     </div>
-                    <table class="server-table" style="margin:0;">
+                    <div style="overflow-x:auto;">
+                    <table class="server-table" style="margin:0; min-width:1100px;">
                         <thead>
                             <tr>
-                                <th>Owner</th>
-                                <th>Server Name</th>
-                                <th>Entry Date</th>
+                                <th>SERVERS</th>
+                                <th>Main IP</th>
+                                <th>Domain</th>
+                                <th>RDNS</th>
+                                <th>Statut</th>
+                                <th>Class</th>
+                                <th>DateEntre</th>
+                                <th>Notice Date</th>
+                                <th>ASN</th>
+                                <th>Nbr IP</th>
                                 <th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="dbT2Body"></tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 
@@ -2365,6 +2395,73 @@
             }
         };
 
+        window.handleBulkGroupImport = function() {
+            const raw = document.getElementById('bulkGroupImportInput').value.trim();
+            if(!raw) return;
+            const team = document.getElementById('bulkGroupTeam').value;
+            const owner = document.getElementById('bulkGroupOwner').value.trim() || (team === '1' ? 'REDA' : 'KHALID');
+            const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+            
+            // Parse lines: SERVERS;Main IP;Domain;RDNS;Statut;Class;DateEntre;Notice Date;ASN;Nbr IP
+            const serverMap = {};
+            lines.forEach(line => {
+                const parts = line.split(';');
+                const name = (parts[0] || '').trim();
+                if(!name) return;
+                
+                const ip = (parts[1] || '').trim();
+                const domain = (parts[2] || '').trim();
+                const rdns = (parts[3] || '').trim();
+                const statut = (parts[4] || 'Active').trim();
+                const cls = (parts[5] || '').trim();
+                const dateEntre = (parts[6] || window.getTodayFormat()).trim();
+                const noticeDate = (parts[7] || '').trim();
+                const asn = (parts[8] || '').trim();
+                const nbrIp = (parts[9] || '0').trim();
+                
+                if(serverMap[name.toLowerCase()]) {
+                    // Merge IPs and Domains
+                    const existing = serverMap[name.toLowerCase()];
+                    if(ip && !existing.ip.includes(ip)) {
+                        existing.ip = existing.ip ? existing.ip + ', ' + ip : ip;
+                    }
+                    if(domain && !existing.domain.includes(domain)) {
+                        existing.domain = existing.domain ? existing.domain + ', ' + domain : domain;
+                    }
+                    if(rdns && !existing.rdns.includes(rdns)) {
+                        existing.rdns = existing.rdns ? existing.rdns + ', ' + rdns : rdns;
+                    }
+                } else {
+                    serverMap[name.toLowerCase()] = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                        team: team,
+                        name: name,
+                        ip: ip,
+                        domain: domain,
+                        rdns: rdns,
+                        status: statut,
+                        class: cls,
+                        date: dateEntre,
+                        noticeDate: noticeDate,
+                        asn: asn,
+                        nbrIp: nbrIp,
+                        owner: owner
+                    };
+                }
+            });
+            
+            const newServers = Object.values(serverMap);
+            let count = newServers.length;
+            newServers.forEach(srv => window.servers.push(srv));
+            
+            if(count > 0) {
+                window.saveData();
+                window.refreshUI();
+                document.getElementById('bulkGroupImportInput').value = '';
+                alert(`Imported ${count} servers for ${owner} (Team: ${team === '1' ? 'REDA' : 'KHALID'})!`);
+            }
+        };
+
         window.editHistoryServer = function(id) {
             const srv = window.deletedServers.find(s => s.id === id);
             if(!srv) return;
@@ -2635,18 +2732,17 @@
             document.getElementById('t2MonthDel').innerText = t2MonthDel;
 
             const rowRender = (s) => {
-                const tid = `${s.id}_${(s.ip || '').split(/[\s\n,]+/)[0]}`;
-                const trk = (window.trackingData || {})[tid] || { status: 'PENDING', color: '#6b7280' };
-                
                 return `<tr>
-                    <td style="font-weight:600; color:var(--text-secondary);">${s.owner || '-'}</td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <div style="width:8px; height:8px; border-radius:50%; background:${trk.color};" title="Blacklist: ${trk.status}"></div>
-                            <span style="font-weight:700; color:white;">${s.name}</span>
-                        </div>
-                    </td>
+                    <td style="font-weight:700; color:white; font-size:0.75rem;">${s.name || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary); font-family:monospace;">${s.ip || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.domain || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.rdns || '-'}</td>
+                    <td><span style="font-size:0.65rem; padding:2px 6px; border-radius:4px; background:${(s.status||'').toLowerCase()==='active'?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)'}; color:${(s.status||'').toLowerCase()==='active'?'#10b981':'#ef4444'};">${s.status || 'Active'}</span></td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.class || '-'}</td>
                     <td style="font-size:0.7rem; color:var(--text-secondary);">${window.fixDateFormat(s.date)}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.noticeDate || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary); font-family:monospace;">${s.asn || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary); text-align:center;">${s.nbrIp || '0'}</td>
                     <td><div style="display:flex; gap:5px; justify-content:flex-end;">
                         <button onclick="window.editServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem;">Edit</button>
                         <button class="danger" onclick="window.deleteServer('${s.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:2px 8px; font-size:0.7rem;">Del</button>
@@ -2654,8 +2750,8 @@
                 </tr>`;
             };
 
-            t1Body.innerHTML = t1Servers.map(rowRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; color:var(--text-secondary);">No servers.</td></tr>';
-            t2Body.innerHTML = t2Servers.map(rowRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; color:var(--text-secondary);">No servers.</td></tr>';
+            t1Body.innerHTML = t1Servers.map(rowRender).join('') || '<tr><td colspan="11" style="text-align:center; padding:1rem; color:var(--text-secondary);">No servers.</td></tr>';
+            t2Body.innerHTML = t2Servers.map(rowRender).join('') || '<tr><td colspan="11" style="text-align:center; padding:1rem; color:var(--text-secondary);">No servers.</td></tr>';
             
             document.getElementById('t1Count').innerText = `${t1Servers.length} Servers`;
             document.getElementById('t2Count').innerText = `${t2Servers.length} Servers`;
