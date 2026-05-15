@@ -1807,20 +1807,26 @@
         window.handleServerSubmit = function(e) {
             e.preventDefault(); 
             const id = document.getElementById('serverId').value || Date.now().toString();
+            const name = document.getElementById('sName').value.trim();
+            const existingByName = window.servers.find(s => s.name.toLowerCase() === name.toLowerCase() && s.id !== id);
+            if(existingByName) {
+                alert(`Error: A server with the name "${name}" already exists!`);
+                return;
+            }
+
             const data = { 
                 id, 
-                name: document.getElementById('sName').value, 
+                name: name, 
                 ip: document.getElementById('sIp').value, 
                 domain: document.getElementById('sDomain').value,
                 status: document.getElementById('sStatus').value, 
                 class: document.getElementById('sClass').value, 
                 owner: document.getElementById('sOwner').value, 
-                date: document.getElementById('sDate').value, 
+                date: document.getElementById('sDate').value || window.getTodayFormat(), 
                 noticeDate: document.getElementById('sNoticeDate').value, 
                 asn: document.getElementById('sAsn').value, 
                 nbrIp: document.getElementById('sNbrIp').value, 
-                team: document.getElementById('sTeam').value,
-                date: document.getElementById('sDate').value || window.getTodayFormat()
+                team: document.getElementById('sTeam').value
             };
 
             // Smart Auto-Assign Team based on Owner
@@ -2477,7 +2483,10 @@
             const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
             
             // Parse lines: SERVERS;Main IP;Domain;RDNS;Statut;Class;DateEntre;Notice Date;ASN;Nbr IP
+            let addedCount = 0;
+            let updatedCount = 0;
             const serverMap = {};
+
             lines.forEach(line => {
                 const parts = line.split(';');
                 const name = (parts[0] || '').trim();
@@ -2492,47 +2501,54 @@
                 const noticeDate = (parts[7] || '').trim();
                 const asn = (parts[8] || '').trim();
                 const nbrIp = (parts[9] || '0').trim();
-                
-                if(serverMap[name.toLowerCase()]) {
-                    // Merge IPs and Domains
-                    const existing = serverMap[name.toLowerCase()];
-                    if(ip && !existing.ip.includes(ip)) {
-                        existing.ip = existing.ip ? existing.ip + ', ' + ip : ip;
-                    }
-                    if(domain && !existing.domain.includes(domain)) {
-                        existing.domain = existing.domain ? existing.domain + ', ' + domain : domain;
-                    }
-                    if(rdns && !existing.rdns.includes(rdns)) {
-                        existing.rdns = existing.rdns ? existing.rdns + ', ' + rdns : rdns;
-                    }
+
+                const existing = window.servers.find(s => s.name.toLowerCase() === name.toLowerCase());
+
+                if (existing) {
+                    // Update existing server
+                    existing.ip = ip;
+                    existing.domain = domain;
+                    existing.rdns = rdns;
+                    existing.status = statut;
+                    existing.class = cls;
+                    existing.date = dateEntre;
+                    existing.noticeDate = noticeDate;
+                    existing.asn = asn;
+                    existing.nbrIp = nbrIp;
+                    existing.owner = owner;
+                    existing.team = team;
+                    updatedCount++;
                 } else {
-                    serverMap[name.toLowerCase()] = {
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                        team: team,
-                        name: name,
-                        ip: ip,
-                        domain: domain,
-                        rdns: rdns,
-                        status: statut,
-                        class: cls,
-                        date: dateEntre,
-                        noticeDate: noticeDate,
-                        asn: asn,
-                        nbrIp: nbrIp,
-                        owner: owner
-                    };
+                    // Check if already in this batch to avoid duplicates within the same import
+                    if (!serverMap[name.toLowerCase()]) {
+                        serverMap[name.toLowerCase()] = {
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                            team: team,
+                            name: name,
+                            ip: ip,
+                            domain: domain,
+                            rdns: rdns,
+                            status: statut,
+                            class: cls,
+                            date: dateEntre,
+                            noticeDate: noticeDate,
+                            asn: asn,
+                            nbrIp: nbrIp,
+                            owner: owner
+                        };
+                        addedCount++;
+                    }
                 }
             });
             
-            const newServers = Object.values(serverMap);
-            let count = newServers.length;
-            newServers.forEach(srv => window.servers.push(srv));
+            const newServersList = Object.values(serverMap);
+            newServersList.forEach(srv => window.servers.push(srv));
             
-            if(count > 0) {
+            if(addedCount > 0 || updatedCount > 0) {
                 window.saveData();
                 window.refreshUI();
                 document.getElementById('bulkGroupImportInput').value = '';
-                alert(`Imported ${count} servers for ${owner} (Team: ${team === '1' ? 'REDA' : 'KHALID'})!`);
+                alert(`Import Complete: ${addedCount} new servers added, ${updatedCount} servers updated for ${owner}!`);
             }
         };
 
