@@ -262,9 +262,9 @@
                 <div id="bulkToolsContent" style="padding:1.5rem; display:grid; grid-template-columns: 1fr 1fr; gap:2rem; border-top:1px solid rgba(0,242,254,0.1);">
                     <!-- Quick Add -->
                     <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:12px; border:1px solid var(--border-color);">
-                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;">Quick Add (Format: <code style="color:#00f2fe;">team;name;ip;domain</code>)</p>
+                        <p style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.8rem;">Quick Add (Format: <code style="color:#00f2fe;">Owner;Name Server</code>)</p>
                         <div style="display:flex; gap:10px; align-items:flex-end;">
-                            <textarea id="quickAddInput" style="flex:1; height:60px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="1;SRV_001;1.1.1.1;site.com"></textarea>
+                            <textarea id="quickAddInput" style="flex:1; height:60px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:8px; padding:10px; font-size:0.75rem; font-family:monospace;" placeholder="REDA;srv_001&#10;KHALID;srv_002"></textarea>
                             <button class="btn-primary" onclick="window.handleQuickAdd()" style="height:60px; padding:0 20px; background:linear-gradient(135deg, #00f2fe, #00c6ff); color:black; font-weight:700;">Add</button>
                         </div>
                     </div>
@@ -2272,19 +2272,22 @@
             lines.forEach(line => {
                 const parts = line.split(';');
                 if(parts.length >= 2) {
-                    const team = parts[0] || '1';
-                    const name = parts[1];
-                    const ip = parts[2] || '';
-                    const domain = parts[3] || '';
+                    const owner = parts[0].trim();
+                    const name = parts[1].trim();
+                    
+                    let team = '1';
+                    const ownerLower = owner.toLowerCase();
+                    if(ownerLower === 'khalid') team = '2';
+                    else if(ownerLower === 'reda') team = '1';
                     
                     const srv = {
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
                         team: team,
                         name: name,
-                        ip: ip,
-                        domain: domain,
+                        ip: '',
+                        domain: '',
                         status: 'Active',
-                        owner: team == '1' ? 'REDA' : (team == '2' ? 'KHALID' : '')
+                        owner: owner
                     };
                     window.servers.push(srv);
                     count++;
