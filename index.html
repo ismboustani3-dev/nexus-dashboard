@@ -1176,11 +1176,17 @@
                         const owner = parts[0].trim();
                         const sName = parts[1].trim();
                         if (owner && sName) {
+                            let finalTeam = team;
+                            // Smart Auto-Assign Team based on Owner in CSV
+                            const ownerLower = owner.toLowerCase().trim();
+                            if(ownerLower === 'khalid') finalTeam = '2';
+                            else if(ownerLower === 'reda') finalTeam = '1';
+
                             window.servers.push({
                                 id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
                                 name: sName,
                                 owner: owner,
-                                team: team,
+                                team: finalTeam,
                                 status: 'Active',
                                 ip: '',
                                 domain: '',
@@ -1634,6 +1640,11 @@
                 nbrIp: document.getElementById('sNbrIp').value, 
                 team: document.getElementById('sTeam').value 
             };
+
+            // Smart Auto-Assign Team based on Owner
+            const ownerLower = (data.owner || '').toLowerCase().trim();
+            if(ownerLower === 'khalid') data.team = '2';
+            else if(ownerLower === 'reda') data.team = '1';
             const idx = window.servers.findIndex(s => s.id === id); 
             if(idx > -1) window.servers[idx] = data; 
             else window.servers.push(data);
