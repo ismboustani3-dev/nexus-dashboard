@@ -1107,13 +1107,12 @@
 
         window.saveData = function() {
             // ⛔ SAFETY GUARD: Block save if data hasn't loaded from Firebase yet
-            // This prevents accidental overwriting of Firebase data with empty arrays
             if (!window._dataLoaded) {
                 console.warn("saveData blocked: Firebase data not yet loaded. Skipping to prevent data loss.");
                 return;
             }
 
-            db.ref('nexus').update({
+            const payload = {
                 projects: window.projects || [],
                 servers: window.servers || [],
                 teams: window.teamNames || { team1: 'REDA', team2: 'KHALID' },
@@ -1122,7 +1121,13 @@
                 remarques: window.remarques || [],
                 rdnsData: window.rdnsData || {},
                 deletedServers: window.deletedServers || []
-            }).then(() => {
+            };
+
+            // 1. MIRROR TO LOCAL STORAGE
+            localStorage.setItem('nexus_backup', JSON.stringify(payload));
+
+            // 2. SAVE TO FIREBASE
+            db.ref('nexus').update(payload).then(() => {
                 const saveBtn = document.querySelector('#trackingView .bl-btn-primary');
                 if(saveBtn && saveBtn.innerHTML.includes('Save')) {
                     const oldHtml = saveBtn.innerHTML;
@@ -1142,7 +1147,17 @@
             document.body.appendChild(loader);
 
             db.ref('nexus').once('value').then((snap) => {
-                const data = snap.val() || {};
+                let data = snap.val() || {};
+                
+                // RESTORE FROM LOCAL STORAGE IF FIREBASE IS EMPTY
+                const localBackup = localStorage.getItem('nexus_backup');
+                if ((!data.projects || data.projects.length === 0) && localBackup) {
+                    const useLocal = confirm("⚠️ Firebase is empty. Found a local backup. Restore it?");
+                    if (useLocal) {
+                        data = JSON.parse(localBackup);
+                    }
+                }
+
                 window.projects = data.projects || [];
                 window.servers = data.servers || [];
                 window.teamNames = data.teams || { team1: 'REDA', team2: 'KHALID' };
