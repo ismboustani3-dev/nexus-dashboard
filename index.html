@@ -286,6 +286,44 @@
                     </table>
                 </div>
             </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem; margin-top:3rem;">
+                <!-- Team 1 History -->
+                <div class="card-container" style="padding:0; overflow:hidden; border-color:rgba(239,68,68,0.2);">
+                    <div style="background:rgba(239,68,68,0.05); padding:0.8rem 1rem; border-bottom:1px solid rgba(239,68,68,0.1); display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-family:'Outfit'; font-size:0.9rem; color:#ef4444; letter-spacing:1px;">REDA - DELETED HISTORY</h3>
+                        <span id="t1DelCount" style="font-size:0.7rem; color:var(--text-secondary);">0 Records</span>
+                    </div>
+                    <table class="server-table" style="margin:0; opacity:0.7;">
+                        <thead>
+                            <tr>
+                                <th>Owner</th>
+                                <th>Server Name</th>
+                                <th style="text-align:right;">Date Deleted</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbT1DelBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Team 2 History -->
+                <div class="card-container" style="padding:0; overflow:hidden; border-color:rgba(239,68,68,0.2);">
+                    <div style="background:rgba(239,68,68,0.05); padding:0.8rem 1rem; border-bottom:1px solid rgba(239,68,68,0.1); display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-family:'Outfit'; font-size:0.9rem; color:#ef4444; letter-spacing:1px;">KHALID - DELETED HISTORY</h3>
+                        <span id="t2DelCount" style="font-size:0.7rem; color:var(--text-secondary);">0 Records</span>
+                    </div>
+                    <table class="server-table" style="margin:0; opacity:0.7;">
+                        <thead>
+                            <tr>
+                                <th>Owner</th>
+                                <th>Server Name</th>
+                                <th style="text-align:right;">Date Deleted</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbT2DelBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div id="teamView" class="view" style="display:none;">
@@ -1006,7 +1044,8 @@
                 settings: window.settings || { adminName: 'Admin', adminPass: 'admin', users: [] },
                 tracking: window.trackingData || {},
                 remarques: window.remarques || [],
-                rdnsData: window.rdnsData || {}
+                rdnsData: window.rdnsData || {},
+                deletedServers: window.deletedServers || []
             }).then(() => {
                 const saveBtn = document.querySelector('#trackingView .bl-btn-primary');
                 if(saveBtn && saveBtn.innerHTML.includes('Save')) {
@@ -1034,6 +1073,7 @@
                 window.settings = data.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
                 window.trackingData = data.tracking || {};
                 window.rdnsData = data.rdnsData || {};
+                window.deletedServers = data.deletedServers || [];
                 
                 window.currentUser.name = window.settings.adminName;
                 document.getElementById('setAdminName').value = window.settings.adminName;
@@ -2106,9 +2146,16 @@
         };
 
         window.deleteServer = function(id) {
-            if(confirm('Delete this server?')) {
+            if(confirm('Archive this server to history?')) {
+                const srv = window.servers.find(s => s.id === id);
+                if(srv) {
+                    srv.deleteDate = new Date().toLocaleString();
+                    if(!window.deletedServers) window.deletedServers = [];
+                    window.deletedServers.push(srv);
+                }
                 window.servers = window.servers.filter(s => s.id !== id);
                 window.saveData();
+                window.refreshUI();
             }
         };
 
@@ -2358,6 +2405,26 @@
             
             document.getElementById('t1Count').innerText = `${t1Servers.length} Servers`;
             document.getElementById('t2Count').innerText = `${t2Servers.length} Servers`;
+
+            // Render History
+            const t1DelBody = document.getElementById('dbT1DelBody');
+            const t2DelBody = document.getElementById('dbT2DelBody');
+            if(t1DelBody && t2DelBody) {
+                const delT1 = (window.deletedServers || []).filter(s => s.team == '1');
+                const delT2 = (window.deletedServers || []).filter(s => s.team == '2');
+
+                const delRender = (s) => `<tr>
+                    <td style="font-size:0.75rem;">${s.owner || '-'}</td>
+                    <td style="font-size:0.75rem; font-weight:600; color:#ef4444;">${s.name}</td>
+                    <td style="text-align:right; font-size:0.7rem; color:var(--text-secondary);">${s.deleteDate || '-'}</td>
+                </tr>`;
+
+                t1DelBody.innerHTML = delT1.map(delRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
+                t2DelBody.innerHTML = delT2.map(delRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
+                
+                document.getElementById('t1DelCount').innerText = `${delT1.length} Records`;
+                document.getElementById('t2DelCount').innerText = `${delT2.length} Records`;
+            }
 
             if(window.lucide) lucide.createIcons();
         };
