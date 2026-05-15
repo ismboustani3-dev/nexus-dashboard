@@ -1538,7 +1538,11 @@
                         if (resp.ok) {
                             const data = await resp.json();
                             if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
-                                return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
+                                let listName = 'SIA';
+                                if(data.lists && data.lists.length > 0) {
+                                    listName = data.lists.map(l => l.name).join('+');
+                                }
+                                return { listed: true, zone: `Spamhaus (${listName})` };
                             }
                         }
                     } catch (e) { }
@@ -1561,6 +1565,14 @@
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
                         if (dns.Answer && dns.Answer.length > 0) {
+                            const val = dns.Answer[0].data;
+                            // Spamhaus ZEN specific codes
+                            if (z.name === 'Spamhaus ZEN') {
+                                if (val === '127.0.0.2') return { listed: true, zone: 'Spamhaus SBL' };
+                                if (val === '127.0.0.3') return { listed: true, zone: 'Spamhaus CSS' };
+                                if (val.startsWith('127.0.0.')) return { listed: true, zone: 'Spamhaus ZEN' };
+                                return null; // Likely a block notice (127.255.255.252)
+                            }
                             return { listed: true, zone: z.name };
                         }
                     } catch (e) {}
