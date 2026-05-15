@@ -245,49 +245,46 @@
                 <div style="display:flex; gap:1rem;">
                     <button class="btn-primary" onclick="window.openServerModal()"><i data-lucide="plus" size="14"></i> Add Master Server</button>
                     <button class="btn-secondary" onclick="window.openMasterImportModal()"><i data-lucide="upload" size="14"></i> Import Master Data</button>
-                    <button class="btn-secondary" onclick="window.refreshUI()"><i data-lucide="refresh-cw" size="14"></i> Sync All</button>
-                </div>
-            </div>
-
-            <div class="filter-bar" style="margin-bottom: 1.5rem;">
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <i data-lucide="search" size="18" style="color:var(--accent-color);"></i>
-                    <input type="text" id="dbSearchInput" placeholder="Search Master DB..." oninput="window.renderDatabase()" style="width:300px; padding:0.4rem 0.8rem; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:white; font-size:0.8rem;">
-                </div>
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
-                    <span style="font-size:0.8rem; color:var(--text-secondary);">Team:</span>
-                    <select id="dbTeamFilter" onchange="window.renderDatabase()"><option value="all">All Teams</option></select>
-                </div>
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 2rem;">
-                    <span style="font-size:0.8rem; color:var(--text-secondary);">Blacklist:</span>
-                    <select id="dbBlacklistFilter" onchange="window.renderDatabase()">
-                        <option value="all">All Status</option>
-                        <option value="CLEAN">Clean Only</option>
-                        <option value="LISTED">Listed Only</option>
-                        <option value="PENDING">Pending</option>
-                    </select>
-                </div>
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-left: auto;">
-                    <button class="btn-primary" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;" onclick="window.deleteFilteredServers()"><i data-lucide="trash-2" size="14"></i> Delete Filtered</button>
                     <button class="danger" style="background:#ef4444; color:white; padding: 0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:700;" onclick="window.clearAllServers()"><i data-lucide="skull" size="14"></i> CLEAR DB</button>
                 </div>
             </div>
 
-            <div class="card-container" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color);">
-                <table class="server-table" style="margin:0;">
-                    <thead>
-                        <tr>
-                            <th>Server</th>
-                            <th>IP / Domain</th>
-                            <th>Team</th>
-                            <th>Owner</th>
-                            <th>Blacklist Status</th>
-                            <th>RDNS</th>
-                            <th style="text-align:right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dbTableBody"></tbody>
-                </table>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+                <!-- Team 1 Column -->
+                <div class="card-container" style="padding:0; overflow:hidden;">
+                    <div style="background:rgba(99,102,241,0.1); padding:1rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-family:'Outfit'; font-size:1.1rem; color:white;">TEAM 1</h3>
+                        <span id="t1Count" style="font-size:0.8rem; color:var(--text-secondary);">0 Servers</span>
+                    </div>
+                    <table class="server-table" style="margin:0;">
+                        <thead>
+                            <tr>
+                                <th>Owner</th>
+                                <th>Server Name</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbT1Body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Team 2 Column -->
+                <div class="card-container" style="padding:0; overflow:hidden;">
+                    <div style="background:rgba(16,185,129,0.1); padding:1rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-family:'Outfit'; font-size:1.1rem; color:white;">TEAM 2</h3>
+                        <span id="t2Count" style="font-size:0.8rem; color:var(--text-secondary);">0 Servers</span>
+                    </div>
+                    <table class="server-table" style="margin:0;">
+                        <thead>
+                            <tr>
+                                <th>Owner</th>
+                                <th>Server Name</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbT2Body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -2316,49 +2313,38 @@
         window.toggleTools = function(el) { window.toggleSubmenu('toolsSubmenu', el); };
 
         window.renderDatabase = function() {
-            const tbody = document.getElementById('dbTableBody');
-            if(!tbody) return;
+            const t1Body = document.getElementById('dbT1Body');
+            const t2Body = document.getElementById('dbT2Body');
+            if(!t1Body || !t2Body) return;
             
-            const search = document.getElementById('dbSearchInput').value.toLowerCase();
-            const teamF = document.getElementById('dbTeamFilter').value;
-            const blackF = document.getElementById('dbBlacklistFilter').value;
-            
-            let filtered = window.servers.filter(s => {
-                const matchesSearch = s.name.toLowerCase().includes(search) || (s.ip||'').toLowerCase().includes(search) || (s.domain||'').toLowerCase().includes(search) || (s.owner||'').toLowerCase().includes(search);
-                const matchesTeam = teamF === 'all' || s.team == teamF;
-                
-                let matchesBlack = true;
-                if(blackF !== 'all') {
-                    const tid = `${s.id}_${(s.ip || '').split(/[\s\n,]+/)[0]}`;
-                    const trk = (window.trackingData || {})[tid] || { status: 'PENDING' };
-                    matchesBlack = trk.status === blackF;
-                }
-                
-                return matchesSearch && matchesTeam && matchesBlack;
-            });
+            const t1Servers = window.servers.filter(s => s.team == '1');
+            const t2Servers = window.servers.filter(s => s.team == '2');
 
-            tbody.innerHTML = filtered.map(s => {
+            const rowRender = (s) => {
                 const tid = `${s.id}_${(s.ip || '').split(/[\s\n,]+/)[0]}`;
                 const trk = (window.trackingData || {})[tid] || { status: 'PENDING', color: '#6b7280' };
-                const rdns = (window.rdnsData || {})[s.id] || { status: 'NONE', color: '#6b7280' };
-                const teamName = window.teamNames[`team${s.team}`] || `Team ${s.team}`;
                 
                 return `<tr>
-                    <td style="font-weight:600;">${s.name}</td>
-                    <td style="font-size:0.75rem; color:var(--text-secondary); max-width:200px; overflow:hidden; text-overflow:ellipsis;">${s.ip}<br>${s.domain}</td>
-                    <td><span style="font-size:0.7rem; background:rgba(99,102,241,0.1); padding:2px 6px; border-radius:4px;">${teamName}</span></td>
-                    <td>${s.owner || '-'}</td>
-                    <td><span style="color:${trk.color}; font-weight:bold; font-size:0.7rem; border:1px solid ${trk.color}44; padding:2px 6px; border-radius:4px;">${trk.status}</span></td>
-                    <td><span style="color:${rdns.color}; font-size:0.7rem;">${rdns.status}</span></td>
+                    <td style="font-weight:600; color:var(--text-secondary);">${s.owner || '-'}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:8px; height:8px; border-radius:50%; background:${trk.color};" title="Blacklist: ${trk.status}"></div>
+                            <span style="font-weight:700; color:white;">${s.name}</span>
+                        </div>
+                    </td>
                     <td><div style="display:flex; gap:5px; justify-content:flex-end;">
-                        <button onclick="window.editServer('${s.id}')">Edit</button>
-                        <button onclick="window.checkSingleIp('${tid}')" style="background:rgba(16,185,129,0.1); color:#10b981; border-color:rgba(16,185,129,0.3);">Check</button>
-                        <button class="danger" onclick="window.deleteServer('${s.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;">Del</button>
+                        <button onclick="window.editServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem;">Edit</button>
+                        <button class="danger" onclick="window.deleteServer('${s.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:2px 8px; font-size:0.7rem;">Del</button>
                     </div></td>
                 </tr>`;
-            }).join('') || '<tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--text-secondary);">No servers matching filters.</td></tr>';
+            };
+
+            t1Body.innerHTML = t1Servers.map(rowRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; color:var(--text-secondary);">No servers.</td></tr>';
+            t2Body.innerHTML = t2Servers.map(rowRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; color:var(--text-secondary);">No servers.</td></tr>';
             
-            window.lastFilteredDbServers = filtered; // Store for bulk delete
+            document.getElementById('t1Count').innerText = `${t1Servers.length} Servers`;
+            document.getElementById('t2Count').innerText = `${t2Servers.length} Servers`;
+
             if(window.lucide) lucide.createIcons();
         };
 
