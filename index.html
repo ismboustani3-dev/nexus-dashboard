@@ -299,7 +299,8 @@
                             <tr>
                                 <th>Owner</th>
                                 <th>Server Name</th>
-                                <th style="text-align:right;">Date Deleted</th>
+                                <th>Type / Pay Date</th>
+                                <th style="text-align:right;">Archived At</th>
                             </tr>
                         </thead>
                         <tbody id="dbT1DelBody"></tbody>
@@ -317,7 +318,8 @@
                             <tr>
                                 <th>Owner</th>
                                 <th>Server Name</th>
-                                <th style="text-align:right;">Date Deleted</th>
+                                <th>Type / Pay Date</th>
+                                <th style="text-align:right;">Archived At</th>
                             </tr>
                         </thead>
                         <tbody id="dbT2DelBody"></tbody>
@@ -1001,6 +1003,7 @@
     <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2><div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Assign to Owner (Optional)</label><input type="text" id="importOwner" placeholder="Owner name..."></div><div class="import-box" onclick="document.getElementById('fileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="fileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div></div></div>
     
     <div class="modal-overlay" id="masterImportModalOverlay"><div class="modal"><h2>Master Import (Database)</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Format: <strong>Owner;SERVER</strong></p><div class="form-group"><label>Team</label><select id="masterImportTeam"><option value="1">REDA</option><option value="2">KHALID</option></select></div><div class="import-box" onclick="document.getElementById('masterFileInput').click()"><i data-lucide="file-spreadsheet" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="masterFileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="masterImportText" style="width:100%; height:150px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Owner;ServerName1&#10;Owner2;ServerName2"></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeMasterImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleMasterImport()">Process Import</button></div></div></div>
+    <div class="modal-overlay" id="deleteConfirmModalOverlay"><div class="modal" style="max-width:400px;"><h2>Archive Server</h2><p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1.5rem;">How should this server be declared for removal?</p><input type="hidden" id="deleteServerId"><div class="form-group"><label>Declaration Type</label><select id="delType" onchange="document.getElementById('delDateGroup').style.display = this.value === 'payment' ? 'block' : 'none'"><option value="immediately">Immediately</option><option value="payment">On Date Payment</option></select></div><div class="form-group" id="delDateGroup" style="display:none; margin-top:1rem;"><label>Payment Date</label><input type="date" id="delPaymentDate" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%;"></div><div class="modal-actions" style="margin-top:2rem;"><button type="button" class="btn-secondary" onclick="document.getElementById('deleteConfirmModalOverlay').style.display='none'">Cancel</button><button class="btn-primary" style="background:#ef4444;" onclick="window.confirmArchiveServer()">Confirm Archive</button></div></div></div>
 
     <script>
         const firebaseConfig = {
@@ -2146,16 +2149,28 @@
         };
 
         window.deleteServer = function(id) {
-            if(confirm('Archive this server to history?')) {
-                const srv = window.servers.find(s => s.id === id);
-                if(srv) {
-                    srv.deleteDate = new Date().toLocaleString();
-                    if(!window.deletedServers) window.deletedServers = [];
-                    window.deletedServers.push(srv);
-                }
+            document.getElementById('deleteServerId').value = id;
+            document.getElementById('deleteConfirmModalOverlay').style.display = 'flex';
+        };
+
+        window.confirmArchiveServer = function() {
+            const id = document.getElementById('deleteServerId').value;
+            const type = document.getElementById('delType').value;
+            const payDate = document.getElementById('delPaymentDate').value;
+            
+            const srv = window.servers.find(s => s.id === id);
+            if(srv) {
+                srv.deleteDate = new Date().toLocaleString();
+                srv.delType = type === 'immediately' ? 'IMMEDIATELY' : 'DATE PAYMENT';
+                srv.payDate = payDate || '-';
+                
+                if(!window.deletedServers) window.deletedServers = [];
+                window.deletedServers.push(srv);
+                
                 window.servers = window.servers.filter(s => s.id !== id);
                 window.saveData();
                 window.refreshUI();
+                document.getElementById('deleteConfirmModalOverlay').style.display = 'none';
             }
         };
 
@@ -2414,9 +2429,10 @@
                 const delT2 = (window.deletedServers || []).filter(s => s.team == '2');
 
                 const delRender = (s) => `<tr>
-                    <td style="font-size:0.75rem;">${s.owner || '-'}</td>
+                    <td style="font-size:0.7rem; color:var(--text-secondary);">${s.owner || '-'}</td>
                     <td style="font-size:0.75rem; font-weight:600; color:#ef4444;">${s.name}</td>
-                    <td style="text-align:right; font-size:0.7rem; color:var(--text-secondary);">${s.deleteDate || '-'}</td>
+                    <td style="font-size:0.65rem; color:#94a3b8;">${s.delType || 'IMMEDIATELY'} ${s.payDate && s.payDate !== '-' ? `(${s.payDate})` : ''}</td>
+                    <td style="text-align:right; font-size:0.65rem; color:var(--text-secondary);">${s.deleteDate || '-'}</td>
                 </tr>`;
 
                 t1DelBody.innerHTML = delT1.map(delRender).join('') || '<tr><td colspan="3" style="text-align:center; padding:1rem; font-size:0.7rem;">No history.</td></tr>';
