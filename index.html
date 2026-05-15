@@ -83,14 +83,30 @@
         /* DNS Bulk Scanner Styles */
 
         /* IP Popover */
-        .ip-cell-container { position: relative; }
-        .ip-badge { font-size: 0.65rem; color: var(--text-secondary); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; margin-left: 4px; cursor: pointer; transition: 0.2s; }
-        .ip-badge:hover { background: var(--accent-color); color: black; }
-        .ip-popover { display: none; position: absolute; top: 100%; left: 0; background: #1e293b; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); min-width: 160px; margin-top: 5px; }
+        .ip-cell-container { position: relative; display: inline-block; }
+        .ip-badge { font-size: 0.65rem; color: var(--text-secondary); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; margin-left: 4px; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); }
+        .ip-badge:hover { background: var(--accent-color); color: black; border-color: transparent; }
+        .ip-popover { 
+            display: none; 
+            position: absolute; 
+            top: 100%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(30, 41, 59, 0.95); 
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 12px; 
+            padding: 12px; 
+            z-index: 99999; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); 
+            min-width: 200px; 
+            margin-top: 10px; 
+        }
         .ip-popover.active { display: block; }
-        .ip-popover-item { font-family: monospace; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        /* Automatic upward display if space is tight at bottom - optional via JS but let's try CSS first if possible */
+        .ip-popover-item { font-family: monospace; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #cbd5e1; }
         .ip-popover-item:last-child { border-bottom: none; }
-        .ip-popover-item:hover { background: rgba(255,255,255,0.05); }
+        .ip-popover-item:hover { background: rgba(255,255,255,0.1); color: white; }
 
         /* DNS Bulk Scanner Styles */
         .dns-layout { display: grid; grid-template-columns: 320px 1fr; gap: 2rem; align-items: start; }
@@ -2075,13 +2091,15 @@
                         const ipDisplay = ips.length > 1 ? `
                             <div class="ip-cell-container">
                                 ${ips[0]} 
-                                <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${ips.length-1} more</span>
+                                <span class="ip-badge" onclick="event.stopPropagation(); window.toggleSmartPopover(this)">+${ips.length-1} more</span>
                                 <div class="ip-popover">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                                        <span style="font-size:0.6rem; color:var(--text-secondary);">Server IPs</span>
-                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                                        <span style="font-size:0.65rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Server IPs</span>
+                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${ips.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:6px; font-size:0.6rem; padding:4px 8px; cursor:pointer; font-weight:700; transition:0.2s;">Copy All</button>
                                     </div>
-                                    ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
+                                    <div style="max-height:250px; overflow-y:auto; padding-right:4px;" class="custom-scrollbar">
+                                        ${ips.map(ip => `<div class="ip-popover-item">${ip}</div>`).join('')}
+                                    </div>
                                 </div>
                             </div>
                         ` : (ips[0] || '');
@@ -2089,13 +2107,15 @@
                         const domainDisplay = domains.length > 1 ? `
                             <div class="ip-cell-container">
                                 ${domains[0]} 
-                                <span class="ip-badge" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('active')">+${domains.length-1} more</span>
+                                <span class="ip-badge" onclick="event.stopPropagation(); window.toggleSmartPopover(this)">+${domains.length-1} more</span>
                                 <div class="ip-popover">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                                        <span style="font-size:0.6rem; color:var(--text-secondary);">Server Domains</span>
-                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${domains.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:4px; font-size:0.6rem; padding:2px 6px; cursor:pointer; font-weight:600;">Copy All</button>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                                        <span style="font-size:0.65rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Server Domains</span>
+                                        <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${domains.join('\n')}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy All', 1500)" style="background:var(--accent-color); color:black; border:none; border-radius:6px; font-size:0.6rem; padding:4px 8px; cursor:pointer; font-weight:700; transition:0.2s;">Copy All</button>
                                     </div>
-                                    ${domains.map(d => `<div class="ip-popover-item">${d}</div>`).join('')}
+                                    <div style="max-height:250px; overflow-y:auto; padding-right:4px;" class="custom-scrollbar">
+                                        ${domains.map(d => `<div class="ip-popover-item">${d}</div>`).join('')}
+                                    </div>
                                 </div>
                             </div>
                         ` : (domains[0] || '-');
@@ -2237,6 +2257,39 @@
                 pGrid.appendChild(block);
             });
             if(window.lucide) lucide.createIcons();
+        };
+
+        window.toggleSmartPopover = function(el) {
+            const popover = el.nextElementSibling;
+            const isOpening = !popover.classList.contains('active');
+            
+            // Close all other popovers first
+            document.querySelectorAll('.ip-popover.active').forEach(p => {
+                if(p !== popover) p.classList.remove('active');
+            });
+            
+            if(isOpening) {
+                popover.classList.add('active');
+                
+                // Position Check
+                const rect = popover.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                
+                // If it overflows the bottom of the screen
+                if(rect.bottom > windowHeight - 20) {
+                    popover.style.top = 'auto';
+                    popover.style.bottom = '100%';
+                    popover.style.marginBottom = '15px';
+                    popover.style.marginTop = '0';
+                } else {
+                    popover.style.top = '100%';
+                    popover.style.bottom = 'auto';
+                    popover.style.marginBottom = '0';
+                    popover.style.marginTop = '10px';
+                }
+            } else {
+                popover.classList.remove('active');
+            }
         };
 
         window.copyTeamNames = function(tId) {
