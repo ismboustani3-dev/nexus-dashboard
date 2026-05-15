@@ -2114,7 +2114,7 @@
                             </div>
                         `;
 
-                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td>${rdnsDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${s.date}</td><td>${s.noticeDate}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
+                        return `<tr><td>${s.name}</td><td>${ipDisplay}</td><td>${domainDisplay}</td><td>${rdnsDisplay}</td><td><span class="status-badge">${s.status}</span></td><td>${s.class}</td><td>${window.fixDateFormat(s.date)}</td><td>${s.noticeDate || '-'}</td><td>${s.asn}</td><td>${s.nbrIp}</td><td>${s.owner || '-'}</td><td><div style="display:flex; gap:5px;"><button onclick="window.editServer('${s.id}')">Edit</button> <button onclick="window.copyServerPairs('${s.id}')" style="background:rgba(99,102,241,0.1); color:#6366f1; border-color:rgba(99,102,241,0.3);">Pairs</button> <button onclick="window.deleteServer('${s.id}')">Del</button></div></td></tr>`;
                     }).join('');
 
                 let teamDeleted = []; // History removed at user request
@@ -2137,7 +2137,7 @@
                         </div>
                         <div class="server-table-container">
                             <table class="server-table">
-                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Domain</th><th>RDNS</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>AASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
+                                <thead><tr><th>SERVERS</th><th>Main IP</th><th>Domain</th><th>RDNS</th><th>Statut</th><th>Class</th><th>Date Entre</th><th>Notice Date</th><th>ASN</th><th>Nbr IP</th><th>Owner</th><th></th></tr></thead>
                                 <tbody>${rows}</tbody>
                             </table>
                         </div>
