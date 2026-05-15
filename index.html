@@ -98,6 +98,9 @@
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05); 
             width: 280px; 
             pointer-events: auto;
+            top: 0;
+            left: 0;
+            transform: none;
         }
         .ip-popover.active { display: block; }
         /* Automatic upward display if space is tight at bottom - optional via JS but let's try CSS first if possible */
@@ -2276,35 +2279,29 @@
             });
             
             if(isOpening) {
+                popover.style.display = 'block'; // Force display to measure
                 popover.classList.add('active');
                 
-                // Calculate dynamic position
                 const badgeRect = el.getBoundingClientRect();
-                const popRect = popover.getBoundingClientRect();
+                const popWidth = 280; // Fixed width from CSS
+                const popHeight = popover.offsetHeight;
                 
                 // Horizontal Centering
-                let left = badgeRect.left + (badgeRect.width / 2) - (popRect.width / 2);
-                // Prevent going off screen
-                left = Math.max(10, Math.min(left, window.innerWidth - popRect.width - 10));
+                let left = badgeRect.left + (badgeRect.width / 2) - (popWidth / 2);
+                left = Math.max(10, Math.min(left, window.innerWidth - popWidth - 10));
                 
-                // Vertical check
+                // Vertical positioning
                 const spaceBelow = window.innerHeight - badgeRect.bottom;
-                const spaceAbove = badgeRect.top;
-                
-                if (spaceBelow < popRect.height + 20 && spaceAbove > spaceBelow) {
-                    // Show Above
-                    popover.style.top = (badgeRect.top - popRect.height - 12) + 'px';
+                if (spaceBelow < popHeight + 20) {
+                    popover.style.top = (badgeRect.top - popHeight - 12) + 'px';
                 } else {
-                    // Show Below
                     popover.style.top = (badgeRect.bottom + 12) + 'px';
                 }
                 
                 popover.style.left = left + 'px';
-                popover.style.transform = 'none'; // Clear previous transform
-                popover.style.marginTop = '0';
-                popover.style.marginBottom = '0';
             } else {
                 popover.classList.remove('active');
+                popover.style.display = 'none';
             }
         };
 
