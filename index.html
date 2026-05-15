@@ -1589,7 +1589,7 @@
             const result = [];
             
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 ips.forEach(ip => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || {};
@@ -1648,8 +1648,8 @@
 
                 if (existing) {
                     // Update existing: merge IPs and Domains
-                    const oldIps = (existing.ip || '').split(/[,\n]+/).map(x => x.trim()).filter(x => x);
-                    const oldDomains = (existing.domain || '').split(/[,\n]+/).map(x => x.trim()).filter(x => x);
+                    const oldIps = (existing.ip || '').split(/[,\s\n]+/).map(x => x.trim()).filter(x => x);
+                    const oldDomains = (existing.domain || '').split(/[,\s\n]+/).map(x => x.trim()).filter(x => x);
                     
                     const mergedIps = new Set([...oldIps, ...data.ips]);
                     const mergedDomains = new Set([...oldDomains, ...data.domains]);
@@ -1814,10 +1814,14 @@
                 return;
             }
 
+            const ipVal = document.getElementById('sIp').value;
+            const ipsCalculated = ipVal.split(/[,\s\n]+/).filter(x => x).length;
+            const nbrIpInput = document.getElementById('sNbrIp').value;
+
             const data = { 
                 id, 
                 name: name, 
-                ip: document.getElementById('sIp').value, 
+                ip: ipVal, 
                 domain: document.getElementById('sDomain').value,
                 status: document.getElementById('sStatus').value, 
                 class: document.getElementById('sClass').value, 
@@ -1825,7 +1829,7 @@
                 date: document.getElementById('sDate').value || window.getTodayFormat(), 
                 noticeDate: document.getElementById('sNoticeDate').value, 
                 asn: document.getElementById('sAsn').value, 
-                nbrIp: document.getElementById('sNbrIp').value, 
+                nbrIp: nbrIpInput && nbrIpInput !== "0" ? nbrIpInput : ipsCalculated.toString(), 
                 team: document.getElementById('sTeam').value
             };
 
@@ -2093,7 +2097,7 @@
                 }).join('') || '<div style="font-size:0.75rem; color:var(--text-secondary)">No Class data</div>';
 
                     const rows = srvs.map(s => {
-                        const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                        const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                         const ipDisplay = ips.length > 1 ? `
                             <div class="ip-cell-container">
                                 ${ips[0]} 
@@ -2109,7 +2113,7 @@
                                 </div>
                             </div>
                         ` : (ips[0] || '');
-                            const domains = (s.domain || '').split(/[,\n]+/).map(d => d.trim()).filter(d => d);
+                            const domains = (s.domain || '').split(/[,\s\n]+/).map(d => d.trim()).filter(d => d);
                         const domainDisplay = domains.length > 1 ? `
                             <div class="ip-cell-container">
                                 ${domains[0]} 
@@ -2306,7 +2310,7 @@
         };
         window.copyTeamIPs = function(tId) {
             const srvs = window.servers.filter(s => s.team == tId);
-            const ips = srvs.map(s => (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip)).flat().join('\n');
+            const ips = srvs.map(s => (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip)).flat().join('\n');
             const ipCount = ips.split('\n').filter(x => x).length;
             navigator.clipboard.writeText(ips);
             alert(`Copied ${ipCount} IPs to clipboard!`);
@@ -2500,7 +2504,9 @@
                 const dateEntre = (parts[6] || window.getTodayFormat()).trim();
                 const noticeDate = (parts[7] || '').trim();
                 const asn = (parts[8] || '').trim();
-                const nbrIp = (parts[9] || '0').trim();
+                
+                const ipsArr = ip.split(/[,\s\n]+/).filter(x => x);
+                const nbrIp = (parts[9] || '').trim() || ipsArr.length.toString();
 
                 const existing = window.servers.find(s => s.name.toLowerCase() === name.toLowerCase());
 
