@@ -1650,6 +1650,7 @@
             else window.servers.push(data);
             window.saveData(); 
             window.closeServerModal();
+            window.refreshUI();
             
             // Auto-trigger blacklist scan for new servers
             if(idx === -1) {
@@ -2013,6 +2014,8 @@
                     tg.innerHTML += render(tId, window.teamNames[tIdKey]);
                 }
             });
+
+            if(window.renderDatabase) window.renderDatabase();
             
             let vP = window.projects || [];
             const projOwnerFilterEl = document.getElementById('projOwnerFilter');
