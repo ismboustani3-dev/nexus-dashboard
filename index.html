@@ -244,6 +244,7 @@
                 <h1 style="font-family: 'Outfit';">Central Database Explorer</h1>
                 <div style="display:flex; gap:1rem;">
                     <button class="btn-primary" onclick="window.openServerModal()"><i data-lucide="plus" size="14"></i> Add Master Server</button>
+                    <button class="btn-secondary" onclick="window.openMasterImportModal()"><i data-lucide="upload" size="14"></i> Import Master Data</button>
                     <button class="btn-secondary" onclick="window.refreshUI()"><i data-lucide="refresh-cw" size="14"></i> Sync All</button>
                 </div>
             </div>
@@ -963,6 +964,8 @@
     <div class="modal-overlay" id="serverModalOverlay"><div class="modal"><h2>Server Details</h2><form id="serverForm" onsubmit="window.handleServerSubmit(event)"><input type="hidden" id="serverId"><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>SERVERS Name</label><input type="text" id="sName" required></div><div class="form-group"><label>IP(s) (One per line)</label><textarea id="sIp" style="width:100%; height:38px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-family:monospace; resize:vertical; line-height:1.2;"></textarea></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Domain(s) (One per line)</label><textarea id="sDomain" style="width:100%; height:38px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-family:monospace; resize:vertical; line-height:1.2;"></textarea></div><div class="form-group"><label>Statut</label><input type="text" id="sStatus" value="Active"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Class</label><input type="text" id="sClass"></div><div class="form-group"><label>Owner</label><input type="text" id="sOwner" placeholder="Owner name..."></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Team</label><select id="sTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Date Entre</label><input type="text" id="sDate"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Notice Date</label><input type="text" id="sNoticeDate"></div><div class="form-group"><label>ASN</label><input type="text" id="sAsn"></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;"><div class="form-group"><label>Nbr IP</label><input type="number" id="sNbrIp" value="0"></div></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="window.closeServerModal()">Cancel</button><button type="submit" class="btn-primary">Save Server</button></div></form></div></div>
     <div class="modal-overlay" id="projectImportModalOverlay"><div class="modal"><h2>Import Projects</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Format: Owner;Project;Link;User;Pass</p><div class="import-box" onclick="document.getElementById('projFileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="projFileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="projImportText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeProjectImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleProjectImport()">Start Import</button></div></div></div>
     <div class="modal-overlay" id="importModalOverlay"><div class="modal"><h2>Import Servers</h2><div class="form-group"><label>Team</label><select id="importTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="form-group"><label>Assign to Owner (Optional)</label><input type="text" id="importOwner" placeholder="Owner name..."></div><div class="import-box" onclick="document.getElementById('fileInput').click()"><i data-lucide="file-text" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="fileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="importText" style="width:100%; height:100px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Or paste your text here..."></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleImport()">Start Import</button></div></div></div>
+    
+    <div class="modal-overlay" id="masterImportModalOverlay"><div class="modal"><h2>Master Import (Database)</h2><p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Format: <strong>Owner;SERVER</strong></p><div class="form-group"><label>Assign to Team</label><select id="masterImportTeam"><option value="1">Team 1</option><option value="2">Team 2</option></select></div><div class="import-box" onclick="document.getElementById('masterFileInput').click()"><i data-lucide="file-spreadsheet" size="40"></i><p>Click to select CSV/TXT file</p><input type="file" id="masterFileInput" accept=".csv,.txt" style="display: none;"></div><textarea id="masterImportText" style="width:100%; height:150px; margin-top:1rem; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border-color); border-radius:8px; padding:10px;" placeholder="Owner;ServerName1&#10;Owner2;ServerName2"></textarea><div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn-secondary" onclick="window.closeMasterImportModal()">Cancel</button><button class="btn-primary" onclick="window.handleMasterImport()">Process Import</button></div></div></div>
 
     <script>
         const firebaseConfig = {
@@ -1144,6 +1147,62 @@
         window.closeImportModal = function() { document.getElementById('importModalOverlay').style.display = 'none'; };
         window.openProjectImportModal = function() { document.getElementById('projImportText').value = ''; document.getElementById('projectImportModalOverlay').style.display = 'flex'; };
         window.closeProjectImportModal = function() { document.getElementById('projectImportModalOverlay').style.display = 'none'; };
+        
+        window.openMasterImportModal = function() { 
+            document.getElementById('masterImportText').value = ''; 
+            document.getElementById('masterImportModalOverlay').style.display = 'flex'; 
+        };
+        window.closeMasterImportModal = function() { 
+            document.getElementById('masterImportModalOverlay').style.display = 'none'; 
+        };
+
+        window.handleMasterImport = function() {
+            const f = document.getElementById('masterFileInput').files[0];
+            const txt = document.getElementById('masterImportText').value.trim();
+            if (f) {
+                const r = new FileReader();
+                r.onload = (e) => window.processMasterImport(e.target.result.replace(/^\uFEFF/, ''));
+                r.readAsText(f);
+            } else if (txt) {
+                window.processMasterImport(txt);
+            }
+        };
+
+        window.processMasterImport = function(raw) {
+            try {
+                const team = document.getElementById('masterImportTeam').value;
+                const lines = raw.split(/\r?\n/);
+                let count = 0;
+                lines.forEach(line => {
+                    const parts = line.split(';');
+                    if (parts.length >= 2) {
+                        const owner = parts[0].trim();
+                        const sName = parts[1].trim();
+                        if (owner && sName) {
+                            window.servers.push({
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                                name: sName,
+                                owner: owner,
+                                team: team,
+                                status: 'Active',
+                                ip: '',
+                                domain: '',
+                                class: 'N/A',
+                                date: new Date().toLocaleDateString(),
+                                noticeDate: '-',
+                                asn: '-',
+                                nbrIp: 0
+                            });
+                            count++;
+                        }
+                    }
+                });
+                window.saveData();
+                window.refreshUI();
+                window.closeMasterImportModal();
+                alert(`Successfully imported ${count} servers to Team ${team}.`);
+            } catch (e) { alert("Import error: " + e.message); }
+        };
         window.handleProjectImport = function() {
             const f = document.getElementById('projFileInput').files[0];
             const txt = document.getElementById('projImportText').value.trim();
