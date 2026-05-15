@@ -2780,7 +2780,10 @@
                     <td style="font-size:0.65rem; color:#ef4444; font-weight:600;">${s.delType || 'IMMEDIATELY'}<br><span style="color:var(--text-secondary); font-weight:400;">Pay: ${s.payDate || '-'}</span></td>
                     <td style="font-size:0.65rem; color:var(--text-secondary);">${window.fixDateFormat(s.deleteDate)}</td>
                     <td style="text-align:right;">
-                        <button onclick="window.editHistoryServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:var(--accent-color);">Edit</button>
+                        <div style="display:flex; gap:5px; justify-content:flex-end;">
+                            <button onclick="window.editHistoryServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:var(--accent-color);">Edit</button>
+                            <button onclick="window.deleteHistoryServer('${s.id}')" style="padding:2px 8px; font-size:0.7rem; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;">Del</button>
+                        </div>
                     </td>
                 </tr>`;
 
@@ -2806,14 +2809,23 @@
         };
 
         window.clearAllServers = function() {
-            if(confirm('🚨 NUCLEAR ACTION: Delete EVERY server in the entire database? This cannot be undone!')) {
+            if(confirm('🚨 NUCLEAR ACTION: Delete EVERY server AND ALL HISTORY in the entire database? This cannot be undone!')) {
                 const code = Math.floor(1000 + Math.random() * 9000);
                 if(prompt(`Enter confirmation code ${code} to wipe EVERYTHING:`) === code.toString()) {
                     window.servers = [];
+                    window.deletedServers = [];
                     window.saveData();
                     window.refreshUI();
-                    alert('Database wiped.');
+                    alert('Entire Database and History wiped.');
                 }
+            }
+        };
+
+        window.deleteHistoryServer = function(id) {
+            if(confirm('Delete this record from history?')) {
+                window.deletedServers = (window.deletedServers || []).filter(s => s.id !== id);
+                window.saveData();
+                window.refreshUI();
             }
         };
 
