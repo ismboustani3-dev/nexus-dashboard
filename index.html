@@ -1510,18 +1510,16 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. LOCAL DNSBL PROXY (Most Reliable - uses your own DNS)
+                // 1. LOCAL PROXY
                 try {
                     const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
                     if (resp.ok) {
                         const data = await resp.json();
-                        if(data.listed) {
-                            return { listed: true, zone: data.listedOn.join(', ') };
-                        }
+                        if(data.listed) return { listed: true, zone: data.listedOn.join(', ') };
                     }
                 } catch (e) { }
 
-                // 2. Spamhaus SIA API (Official)
+                // 2. SIA API
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
@@ -1536,31 +1534,31 @@
                     } catch (e) { }
                 }
 
-                // 3. DNSBL Fallback (DoH)
+                // 3. AGGRESSIVE MULTI-DNS (Google, Quad9, AdGuard, NextDNS)
                 const revIp = ip.split('.').reverse().join('.');
-                const providers = [
-                    { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, headers: { 'Accept': 'application/dns-json' } },
-                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` }
+                const dnsProviders = [
+                    { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
+                    { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` }
                 ];
-                const zones = ['zen.spamhaus.org', 'sbl.spamhaus.org', 'css.spamhaus.org', 'bl.spamcop.net'];
+                const zones = ['zen.spamhaus.org', 'sbl.spamhaus.org', 'css.spamhaus.org'];
 
-                for (let provider of providers) {
+                for (let prov of dnsProviders) {
                     for (let zone of zones) {
                         try {
-                            const resp = await fetch(provider.url(zone), { headers: provider.headers || {} });
+                            const resp = await fetch(prov.url(zone), { headers: prov.h || {} });
                             if (resp.ok) {
                                 const dns = await resp.json();
                                 if (dns.Answer && dns.Answer.length > 0) {
                                     const val = dns.Answer[0].data;
-                                    if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
-                                        return { listed: true, zone: `${zone.split('.')[0].toUpperCase()} (${provider.name})` };
-                                    }
+                                    if (val === '127.0.0.255') continue;
+                                    if (val.startsWith('127.0.0.')) return { listed: true, zone: `${zone.split('.')[0].toUpperCase()} (${prov.name})` };
                                 }
                             }
                         } catch (e) { }
                     }
                 }
-
                 return { listed: false };
             }
 
