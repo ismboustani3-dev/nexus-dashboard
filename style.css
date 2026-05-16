@@ -73,6 +73,7 @@ body {
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: 12px;
+    font-size: 1rem;
     transition: var(--transition);
 }
 
@@ -151,7 +152,7 @@ header {
 }
 
 .stat-info h3 {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     color: var(--text-secondary);
     margin-bottom: 0.5rem;
 }
@@ -313,7 +314,7 @@ header {
 .server-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8125rem;
+    font-size: 0.9rem;
 }
 
 .server-table th {
