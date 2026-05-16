@@ -1551,6 +1551,9 @@
                     if(result.listed) {
                         window.trackingData[item.trackId][today] = 'LISTED';
                         window.trackingData[item.trackId].notes = `Listed: ${result.zone} (${new Date().toLocaleDateString()})`;
+                    } else if (result.error) {
+                        window.trackingData[item.trackId][today] = 'ERROR';
+                        window.trackingData[item.trackId].notes = `Scan Error: ${result.error}`;
                     } else {
                         window.trackingData[item.trackId][today] = 'CLEAN';
                         window.trackingData[item.trackId].notes = '';
