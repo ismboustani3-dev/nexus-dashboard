@@ -612,24 +612,18 @@
         </div>
 
         <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+            <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <h1 style="font-family: 'Outfit'; margin:0;">IP Blacklist</h1>
-                    <p style="color:var(--text-secondary); font-size:0.9rem;">Track the daily status of your IPs across teams.</p>
-                </div>
-                <div class="tab-group" style="background:rgba(255,255,255,0.05); padding:4px; border-radius:12px; display:flex; gap:5px;">
-                    <button class="tab-btn active" onclick="window.switchTrackTab('current', this)" style="background:transparent; border:none; color:white; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">Current Week</button>
-                    <button class="tab-btn" onclick="window.switchTrackTab('history', this)" style="background:transparent; border:none; color:var(--text-secondary); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">Historical Blacklist</button>
+                    <h2>IP Blacklist</h2>
+                    <p>Track the daily status of your IPs across teams.</p>
                 </div>
                 <div id="schedulerStatus" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px;">
                     <div style="width:8px; height:8px; background:#00f2fe; border-radius:50%; animation: pulse 2s infinite;"></div>
-                    <span style="font-size:0.8rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
+                    <span style="font-size:0.7rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
                 </div>
-            </div>
-
-            <!-- History Date Selector (Hidden by default) -->
-            <div id="trackHistorySelector" style="display:none; margin-bottom:2rem; overflow-x:auto; white-space:nowrap; padding:15px 0; gap:10px; border-bottom:1px solid var(--border-color);" class="custom-scrollbar">
-                <!-- Dates will be injected here -->
+                <style>
+                    @keyframes pulse { 0% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.4; transform: scale(1); } }
+                </style>
             </div>
             
             <div style="text-align: center; margin-bottom: 1.5rem;">
@@ -1115,8 +1109,6 @@
 
         window.trackingData = {};
         window.activeTrackTeam = 1;
-        window.activeTrackTab = 'current';
-        window.selectedHistoryDate = '';
 
         window._dataLoaded = false; // Safety flag: true only after Firebase data is fully loaded
 
@@ -1195,8 +1187,7 @@
                 
                 // Set up real-time listener
                 db.ref('nexus').on('value', (snapshot) => {
-                    const rData = snapshot.val();
-                    if(!rData) return; // 🛑 CRITICAL SAFETY: If Firebase is empty/null, do NOT overwrite local data.
+                    const rData = snapshot.val() || {};
                     window.projects = rData.projects || [];
                     window.servers = rData.servers || [];
                     window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
@@ -1457,12 +1448,11 @@
                 alert(`Failed to add servers. ${errors} line(s) had an incorrect format. Make sure you use 9 parts separated by semicolons.`);
             }
         };
-
         window.runAutoScan = async function() {
             const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
             const allIPs = [];
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 ips.forEach(ip => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     allIPs.push({ ip, trackId });
@@ -1481,24 +1471,28 @@
             btn.style.opacity = '0.5';
             progressContainer.style.display = 'block';
 
-            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase(); 
+            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase(); // mon, tue...
             const hetrixKey = window.settings.hetrixKey;
             const spamhausToken = window.settings.spamhausToken;
+
+            if(!hetrixKey && !spamhausToken) {
+                alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
+            }
             
+            // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Spamhaus SIA API (Most Reliable if token exists)
-                if(sToken) {
-                    try {
-                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
-                            headers: { 'Authorization': `Bearer ${sToken}` }
-                        });
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            if(data && data.lists && data.lists.length > 0) {
-                                return { listed: true, zone: `Spamhaus (${data.lists[0].name})` };
-                            }
+                // 1. LOCAL DNSBL PROXY (most reliable - uses server's own DNS resolver)
+                try {
+                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if(data.listed) {
+                            return { listed: true, zone: data.listedOn.join(', ') };
                         }
-                    } catch (e) { }
+                        return { listed: false };
+                    }
+                } catch (e) {
+                    // Proxy not running, fall through to other methods
                 }
 
                 // 2. HetrixTools API
@@ -1514,84 +1508,78 @@
                     } catch (e) { }
                 }
 
-                // 3. DNSBL via DoH (Fallback - Note: Spamhaus blocks public resolvers like Google)
-                const zenZones = [
-                    { name: 'Spamhaus (SBL)', code: '127.0.0.2' },
-                    { name: 'Spamhaus (CSS)', code: '127.0.0.3' },
-                    { name: 'Spamhaus (XBL)', code: '127.0.0.4' },
-                    { name: 'Spamhaus (PBL)', code: '127.0.0.10' }
+                // 3. Spamhaus SIA API
+                if(sToken) {
+                    try {
+                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
+                            headers: { 'Authorization': `Bearer ${sToken}` }
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
+                                return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
+                            }
+                        }
+                    } catch (e) { }
+                }
+
+                // 4. DoH Fallback (limited - many DNSBLs block public resolvers)
+                const zones = [
+                    { name: 'UCEPROTECT-1', zone: 'dnsbl-1.uceprotect.net' },
+                    { name: 'DroneRL', zone: 'dnsbl.dronebl.org' },
+                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
-                try {
-                    const resp = await fetch(`https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A`);
-                    const dns = await resp.json();
-                    if (dns.Answer && dns.Answer.length > 0) {
-                        const val = dns.Answer[0].data;
-                        
-                        // ⛔ IMPORTANT: 127.0.0.255 means "Service Refused" (Spamhaus blocks Google DNS)
-                        if (val === '127.0.0.255') return { listed: false };
-                        
-                        const match = zenZones.find(z => z.code === val);
-                        if (match) return { listed: true, zone: match.name };
-                        
-                        // If it's 127.0.0.x but not 255, it's likely a listing
-                        if (val.startsWith('127.0.0.')) return { listed: true, zone: 'Spamhaus (ZEN)' };
-                    }
-                } catch (e) { }
-
-                const otherZones = [
-                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
-                    { name: 'UCEPROTECT', zone: 'dnsbl-1.uceprotect.net' }
-                ];
-                for (let z of otherZones) {
+                for (let z of zones) {
                     try {
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: z.name };
+                        if (dns.Answer && dns.Answer.length > 0) {
+                            const val = dns.Answer[0].data;
+                            if (val.startsWith('127.0.0.')) {
+                                return { listed: true, zone: z.name };
+                            }
+                        }
                     } catch (e) { }
                 }
                 return { listed: false };
             }
 
-            const batchSize = 5;
-            for (let i = 0; i < allIPs.length; i += batchSize) {
-                const batch = allIPs.slice(i, i + batchSize);
-                statusText.innerText = `Scanning batch ${Math.floor(i/batchSize) + 1}...`;
+            for(let i=0; i < allIPs.length; i++) {
+                const item = allIPs[i];
+                const perc = Math.round(((i + 1) / allIPs.length) * 100);
                 
-                await Promise.all(batch.map(async (item) => {
-                    const result = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
-                    if(!window.trackingData[item.trackId]) {
-                        window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
-                    }
-                    
-                    const dateKey = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-                    if(result.listed) {
-                        window.trackingData[item.trackId][today] = 'LISTED';
-                        window.trackingData[item.trackId][dateKey] = 'LISTED';
-                        window.trackingData[item.trackId][`${dateKey}_zone`] = result.zone;
-                        window.trackingData[item.trackId].notes = `Listed: ${result.zone} (${new Date().toLocaleDateString()})`;
-                    } else {
-                        window.trackingData[item.trackId][today] = 'CLEAN';
-                        window.trackingData[item.trackId][dateKey] = 'CLEAN';
-                        window.trackingData[item.trackId].notes = '';
-                    }
-                }));
+                statusText.textContent = `Checking ${item.ip}...`;
+                progressBar.style.width = `${perc}%`;
+                progressPerc.textContent = `${perc}%`;
 
-                const perc = Math.min(100, Math.round(((i + batchSize) / allIPs.length) * 100));
-                progressBar.style.width = perc + '%';
-                progressPerc.innerText = perc + '%';
+                // Run Multi-Source Check
+                const hetrixKey = window.settings.hetrixKey;
+                const check = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
+                let result = check.listed ? 'LISTED' : 'CLEAN';
+
+                if(!window.trackingData[item.trackId]) {
+                    window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
+                }
+                
+                window.trackingData[item.trackId][today] = result;
+                if(check.listed) {
+                    window.trackingData[item.trackId].notes = `Listed: ${check.zone}`;
+                }
+
+                window.renderTrackingTable();
+                await new Promise(r => setTimeout(r, 150));
             }
 
-            statusText.innerText = 'Scan Complete! Saving...';
-            window.saveData();
-            window.renderTrackingTable();
+            statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
+            btn.disabled = false;
+            btn.style.opacity = '1';
             
             setTimeout(() => {
                 progressContainer.style.display = 'none';
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                alert(`Scan finished for ${allIPs.length} IPs.`);
-            }, 1000);
+            }, 3000);
+            
+            window.saveData();
         };
 
         window.copyIpsByStatus = function(status) {
@@ -2976,49 +2964,6 @@
                     input.style.background = 'rgba(0,0,0,0.2)';
                 }
             }
-        window.switchTrackTab = function(tab, btn) {
-            window.activeTrackTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('active');
-                b.style.background = 'transparent';
-                b.style.color = 'var(--text-secondary)';
-            });
-            btn.classList.add('active');
-            btn.style.background = 'var(--accent-gradient)';
-            btn.style.color = 'black';
-
-            const selector = document.getElementById('trackHistorySelector');
-            if(tab === 'history') {
-                selector.style.display = 'flex';
-                window.renderHistoryDateSelector();
-            } else {
-                selector.style.display = 'none';
-            }
-            window.renderTrackingTable();
-        };
-
-        window.renderHistoryDateSelector = function() {
-            const container = document.getElementById('trackHistorySelector');
-            if(!container) return;
-            
-            const dates = new Set();
-            Object.values(window.trackingData).forEach(trk => {
-                Object.keys(trk).forEach(key => {
-                    if(/^\d{4}-\d{2}-\d{2}$/.test(key)) dates.add(key);
-                });
-            });
-
-            const sortedDates = Array.from(dates).sort().reverse();
-            if(!window.selectedHistoryDate && sortedDates.length > 0) {
-                window.selectedHistoryDate = sortedDates[0];
-            }
-
-            container.innerHTML = sortedDates.map(date => {
-                const isActive = date === window.selectedHistoryDate;
-                const bg = isActive ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)';
-                const color = isActive ? 'black' : 'white';
-                return `<button onclick="window.selectedHistoryDate='${date}'; window.renderHistoryDateSelector(); window.renderTrackingTable();" style="background:${bg}; color:${color}; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:700; font-family:'Outfit'; transition:0.3s; min-width:140px;">${date}</button>`;
-            }).join('');
         };
 
         window.renderTrackingTable = function() {
@@ -3040,65 +2985,33 @@
             let html = '';
             
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 if (ips.length === 0) ips.push('No IP');
                 
                 ips.forEach((ip, idx) => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     
-                    let statusForDisplay = '';
-                    let zoneForDisplay = '';
+                    const todayVal = (trk[today] || '').toUpperCase().trim();
+                    if(todayVal === 'CLEAN') cleanCount++;
+                    if(todayVal === 'LISTED') listedCount++;
 
-                    if (window.activeTrackTab === 'history' && window.selectedHistoryDate) {
-                        statusForDisplay = (trk[window.selectedHistoryDate] || '').toUpperCase().trim();
-                        zoneForDisplay = trk[`${window.selectedHistoryDate}_zone`] || '';
-                    } else {
-                        statusForDisplay = (trk[today] || '').toUpperCase().trim();
-                    }
-
-                    if(statusForDisplay === 'CLEAN') cleanCount++;
-                    if(statusForDisplay === 'LISTED') listedCount++;
-
-                    let dayCells = '';
-                    if (window.activeTrackTab === 'history') {
-                        let color = 'var(--text-secondary)';
-                        let bg = 'rgba(255,255,255,0.02)';
-                        if(statusForDisplay === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
-                        if(statusForDisplay === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
+                    let dayCells = days.map(d => {
+                        const val = (trk[d] || '').toUpperCase().trim();
+                        let color = 'white';
+                        let bg = 'rgba(0,0,0,0.2)';
+                        if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
+                        if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
                         
-                        dayCells = `<td colspan="7" style="padding:4px; text-align:center;">
-                            <span style="background:${bg}; color:${color}; padding:8px 20px; border-radius:8px; font-size:1rem; font-weight:800; border:1px solid rgba(255,255,255,0.05); display:inline-block; min-width:150px;">
-                                ${statusForDisplay || 'NO DATA'} ${zoneForDisplay ? `(${zoneForDisplay})` : ''}
-                            </span>
-                        </td>`;
-                    } else {
-                        dayCells = days.map(d => {
-                            const val = (trk[d] || '').toUpperCase().trim();
-                            let color = 'white';
-                            let bg = 'rgba(0,0,0,0.2)';
-                            if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
-                            if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
-                            
-                            return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:60px; background:${bg}; border:1px solid transparent; color:${color}; padding:10px 4px; border-radius:6px; font-size:0.9rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
-                        }).join('');
-                    }
+                        return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:${bg}; border:1px solid transparent; color:${color}; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
+                    }).join('');
                     
-                    const isListedToday = statusForDisplay === 'LISTED';
-                    const trBg = isListedToday ? 'rgba(239, 68, 68, 0.08)' : 'transparent';
-                    const isLastIp = idx === ips.length - 1;
-                    const rowBorder = isLastIp ? '2px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)';
-
-                    html += `<tr style="border-bottom:${rowBorder}; background:${trBg};">
-                        ${idx === 0 ? `<td rowspan="${ips.length}" style="font-weight:700; font-size:1rem; padding: 15px 10px; color:var(--accent-color); border-right:1px solid rgba(255,255,255,0.05); text-align:center; vertical-align:middle;">${s.name}</td>` : ''}
-                        <td style="font-family:monospace; color:white; font-size:1rem; padding: 12px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <a href="https://check.spamhaus.org/query/ip/${ip}" target="_blank" style="color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
-                                ${ip} <i data-lucide="external-link" style="width:14px; height:14px; opacity:0.4;"></i>
-                            </a>
-                        </td>
-                        <td style="padding: 8px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:4px 12px; border-radius:6px; font-size:0.8rem;">${s.owner || '-'}</span></td>
+                    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="font-weight:600; font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${idx === 0 ? s.name : '<span style="color:var(--text-secondary); margin-left:1rem;">↳</span>'}</td>
+                        <td style="font-family:monospace; color:var(--accent-color); font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${ip}</td>
+                        <td style="padding: 8px 10px; white-space:nowrap;"><span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
                         ${dayCells}
-                        <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" ${window.activeTrackTab === 'history' ? 'readonly' : ''} oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:150px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:10px; border-radius:6px; font-size:0.9rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
+                        <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:120px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px; border-radius:4px; font-size:0.75rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
                     </tr>`;
                 });
             });
@@ -3112,7 +3025,7 @@
             if(distContainer && distInner) {
                 const types = {};
                 teamServers.forEach(s => {
-                    const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                    const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     ips.forEach(ip => {
                         const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                         const trk = window.trackingData[trackId] || {};
