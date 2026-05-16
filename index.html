@@ -1482,7 +1482,7 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Spamhaus SIA API (Priority 1: Official & 100% Reliable)
+                // 1. Spamhaus SIA API (The gold standard)
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
@@ -1497,63 +1497,45 @@
                     } catch (e) { }
                 }
 
-                // 2. DNSBL Fallback (Try Multiple DoH Providers)
+                // 2. High-Resiliency DNSBL (Multi-Provider Fallback)
                 const revIp = ip.split('.').reverse().join('.');
-                const dnsProviders = [
-                    { name: 'Google', url: `https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A` },
-                    { name: 'Quad9', url: `https://dns.quad9.net/dns-query?name=${revIp}.zen.spamhaus.org&type=A`, headers: { 'Accept': 'application/dns-json' } }
+                const providers = [
+                    { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, headers: { 'Accept': 'application/dns-json' } },
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
+                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, headers: { 'Accept': 'application/dns-json' } }
                 ];
+                
+                const criticalZones = ['sbl.spamhaus.org', 'css.spamhaus.org', 'xbl.spamhaus.org', 'zen.spamhaus.org'];
 
-                const zenCodes = {
-                    '127.0.0.2': 'Spamhaus SBL',
-                    '127.0.0.3': 'Spamhaus CSS',
-                    '127.0.0.4': 'Spamhaus XBL',
-                    '127.0.0.9': 'Spamhaus SBL',
-                    '127.0.0.10': 'Spamhaus PBL',
-                    '127.0.0.11': 'Spamhaus PBL'
-                };
-
-                for (let provider of dnsProviders) {
-                    try {
-                        const resp = await fetch(provider.url, { headers: provider.headers || {} });
-                        if (resp.ok) {
-                            const dns = await resp.json();
-                            if (dns.Answer && dns.Answer.length > 0) {
-                                const val = dns.Answer[0].data;
-                                if (val === '127.0.0.255') continue; // Refused by this provider, try next one
-                                
-                                if (zenCodes[val]) return { listed: true, zone: zenCodes[val] };
-                                if (val.startsWith('127.0.0.')) return { listed: true, zone: `Spamhaus (${provider.name})` };
+                for (let provider of providers) {
+                    for (let zone of criticalZones) {
+                        try {
+                            const resp = await fetch(provider.url(zone), { headers: provider.headers || {} });
+                            if (resp.ok) {
+                                const dns = await resp.json();
+                                if (dns.Answer && dns.Answer.length > 0) {
+                                    const val = dns.Answer[0].data;
+                                    // Ignore refusal codes
+                                    if (val === '127.0.0.255') continue;
+                                    if (val.startsWith('127.0.0.')) {
+                                        return { listed: true, zone: `${zone.split('.')[0].toUpperCase()} (${provider.name})` };
+                                    }
+                                }
                             }
-                        }
-                    } catch (e) { }
+                        } catch (e) { }
+                    }
                 }
 
-                // 3. HetrixTools API (Backup)
-                if(hKey) {
+                // 3. Fallback to common RBLs
+                const backups = ['bl.spamcop.net', 'dnsbl-1.uceprotect.net'];
+                for (let zone of backups) {
                     try {
-                        const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            if(data.status === 'success' && data.blacklisted_count > 0) {
-                                return { listed: true, zone: `Hetrix (${data.blacklisted_on[0].rbl})` };
-                            }
-                        }
-                    } catch (e) { }
-                }
-
-                // 4. Other DNSBLs
-                const otherZones = [
-                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
-                    { name: 'UCEPROTECT', zone: 'dnsbl-1.uceprotect.net' }
-                ];
-                for (let z of otherZones) {
-                    try {
-                        const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
+                        const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${zone}&type=A`);
                         const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: z.name };
+                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: zone.split('.')[0] };
                     } catch (e) { }
                 }
+
                 return { listed: false };
             }
 
