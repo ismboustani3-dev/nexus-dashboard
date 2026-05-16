@@ -1544,7 +1544,7 @@
                     }
                 }
 
-                // 2. TURBO-RACE MULTI-DNS (9 Providers)
+                // 3. TURBO-RACE MULTI-DNS (9 Providers)
                 const revIp = ip.split('.').reverse().join('.');
                 const dnsProviders = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
@@ -1552,7 +1552,8 @@
                     { name: 'OpenDNS', url: (z) => `https://doh.opendns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'CleanBrowsing', url: (z) => `https://doh.cleanbrowsing.org/doh/family-filter?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A&edns_client_subnet=0.0.0.0/0` },
-                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} }
+                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'NetworkCalc API', url: (z) => `https://networkcalc.com/api/dns/lookup/${revIp}.${z}`, isCustom: true }
                 ];
                 
                 const zones = [
@@ -1571,16 +1572,25 @@
                                     const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(3000) });
                                     if (resp.ok) {
                                         const dns = await resp.json();
-                                        if (dns.Answer && dns.Answer.length > 0) {
-                                            const val = dns.Answer[0].data;
-                                            if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
-                                                let dZone = z.name;
-                                                if(z.name === 'ZEN') {
-                                                    if(val === '127.0.0.3') dZone = 'CSS';
-                                                    else if(val === '127.0.0.2' || val === '127.0.0.4' || val === '127.0.0.9') dZone = 'SBL';
-                                                }
-                                                return { listed: true, zone: dZone, priority: z.priority, prov: prov.name };
+                                        let val = null;
+                                        
+                                        if (prov.isCustom) {
+                                            if (dns && dns.records && dns.records.A && dns.records.A.length > 0) {
+                                                val = dns.records.A[0].address;
                                             }
+                                        } else {
+                                            if (dns.Answer && dns.Answer.length > 0) {
+                                                val = dns.Answer[0].data;
+                                            }
+                                        }
+
+                                        if (val && val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
+                                            let dZone = z.name;
+                                            if(z.name === 'ZEN') {
+                                                if(val === '127.0.0.3') dZone = 'CSS';
+                                                else if(val === '127.0.0.2' || val === '127.0.0.4' || val === '127.0.0.9') dZone = 'SBL';
+                                            }
+                                            return { listed: true, zone: dZone, priority: z.priority, prov: prov.name };
                                         }
                                     }
                                 } catch (e) { }
