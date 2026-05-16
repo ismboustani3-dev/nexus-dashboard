@@ -1508,7 +1508,9 @@
                 alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
             }
             
-            // Ultra-Reliable Multi-Source IP R                // 1. Spamhaus SIA API (with CORS Proxy fallback)
+            // Ultra-Reliable Multi-Source IP Reputation Engine
+            async function checkIpStatus(ip, sToken, hKey) {
+                // 1. Spamhaus SIA API (with CORS Proxy fallback)
                 if(sToken) {
                     const apiUrls = [
                         `https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`,
@@ -1578,6 +1580,7 @@
                     if (validResults.length > 0) {
                         return { listed: true, zone: `${validResults[0].zone} (${validResults[0].prov})` };
                     }
+                } catch (e) { }
                 return { listed: false };
             }
 
