@@ -1510,7 +1510,18 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Spamhaus SIA API (with CORS Proxy fallback)
+                // 1. LOCAL PROXY (Absolute Priority - Uses local DNS resolver)
+                try {
+                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`, { signal: AbortSignal.timeout(2000) });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data.listed) {
+                            return { listed: true, zone: data.listedOn.join(', ') };
+                        }
+                    }
+                } catch (e) { }
+
+                // 2. Spamhaus SIA API (with CORS Proxy fallback)
                 if(sToken) {
                     const apiUrls = [
                         `https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`,
