@@ -1187,7 +1187,8 @@
                 
                 // Set up real-time listener
                 db.ref('nexus').on('value', (snapshot) => {
-                    const rData = snapshot.val() || {};
+                    const rData = snapshot.val();
+                    if(!rData) return; // 🛑 SAFETY GUARD: Stop if Firebase sends null (prevents data wipe)
                     window.projects = rData.projects || [];
                     window.servers = rData.servers || [];
                     window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
