@@ -1508,35 +1508,38 @@
                 alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
             }
             
-            // Ultra-Reliable Multi-Source IP Reputation Engine
-            async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Spamhaus SIA API (Mirroring check.spamhaus.org results)
+            // Ultra-Reliable Multi-Source IP R                // 1. Spamhaus SIA API (with CORS Proxy fallback)
                 if(sToken) {
-                    try {
-                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
-                            headers: { 
-                                'Authorization': `Bearer ${sToken}`,
-                                'Accept': 'application/json'
+                    const apiUrls = [
+                        `https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`,
+                        `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`)}`
+                    ];
+                    for (let url of apiUrls) {
+                        try {
+                            const resp = await fetch(url, {
+                                headers: { 'Authorization': `Bearer ${sToken}`, 'Accept': 'application/json' },
+                                signal: AbortSignal.timeout(3000)
+                            });
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                if(data && data.lists && data.lists.length > 0) {
+                                    const types = data.lists.map(l => l.name).join(', ');
+                                    return { listed: true, zone: `SIA: ${types}` };
+                                }
                             }
-                        });
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            if(data && data.lists && data.lists.length > 0) {
-                                const types = data.lists.map(l => l.name).join(', ');
-                                return { listed: true, zone: `SIA: ${types}` };
-                            }
-                        } else if (resp.status === 401 || resp.status === 403) {
-                            console.error("Spamhaus SIA Token Invalid or Expired");
-                        }
-                    } catch (e) { }
+                        } catch (e) { }
+                    }
                 }
 
-                // 3. TURBO-RACE MULTI-DNS (Full Parallel)
+                // 2. TURBO-RACE MULTI-DNS (9 Providers)
                 const revIp = ip.split('.').reverse().join('.');
                 const dnsProviders = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'Mullvad', url: (z) => `https://doh.mullvad.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'LibreDNS', url: (z) => `https://doh.libredns.gr/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'OpenDNS', url: (z) => `https://doh.opendns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` },
                     { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` }
                 ];
                 
@@ -1544,19 +1547,16 @@
                     { name: 'CSS', host: 'css.spamhaus.org', priority: 1 },
                     { name: 'SBL', host: 'sbl.spamhaus.org', priority: 2 },
                     { name: 'BARRACUDA', host: 'b.barracudacentral.org', priority: 3 },
-                    { name: 'ZEN', host: 'zen.spamhaus.org', priority: 4 },
-                    { name: 'XBL', host: 'xbl.spamhaus.org', priority: 5 },
-                    { name: 'PBL', host: 'pbl.spamhaus.org', priority: 6 }
+                    { name: 'ZEN', host: 'zen.spamhaus.org', priority: 4 }
                 ];
 
                 try {
-                    // Check all zones and all providers simultaneously
                     const allQueries = [];
                     zones.forEach(z => {
                         dnsProviders.forEach(prov => {
                             allQueries.push((async () => {
                                 try {
-                                    const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(2500) });
+                                    const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(2000) });
                                     if (resp.ok) {
                                         const dns = await resp.json();
                                         if (dns.Answer && dns.Answer.length > 0) {
@@ -1578,8 +1578,6 @@
                     if (validResults.length > 0) {
                         return { listed: true, zone: `${validResults[0].zone} (${validResults[0].prov})` };
                     }
-                } catch (e) { }
-
                 return { listed: false };
             }
 
