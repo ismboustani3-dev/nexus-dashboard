@@ -1534,41 +1534,48 @@
                     } catch (e) { }
                 }
 
-                // 3. AGGRESSIVE MULTI-DNS (Google, Quad9, AdGuard, NextDNS)
+                // 3. TURBO-RACE MULTI-DNS (Parallel queries to all providers)
                 const revIp = ip.split('.').reverse().join('.');
                 const dnsProviders = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` }
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
+                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} }
                 ];
                 
                 const zones = [
-                    { name: 'Spamhaus ZEN', host: 'zen.spamhaus.org' },
-                    { name: 'Spamhaus SBL', host: 'sbl.spamhaus.org' },
-                    { name: 'Spamhaus CSS', host: 'css.spamhaus.org' },
+                    { name: 'ZEN', host: 'zen.spamhaus.org' },
+                    { name: 'SBL', host: 'sbl.spamhaus.org' },
+                    { name: 'CSS', host: 'css.spamhaus.org' },
+                    { name: 'XBL', host: 'xbl.spamhaus.org' },
+                    { name: 'PBL', host: 'pbl.spamhaus.org' },
                     { name: 'SpamCop', host: 'bl.spamcop.net' },
-                    { name: 'SORBS', host: 'dnsbl.sorbs.net' },
-                    { name: 'UCEPROTECT-L1', host: 'dnsbl-1.uceprotect.net' },
-                    { name: 'UCEPROTECT-L2', host: 'dnsbl-2.uceprotect.net' },
-                    { name: 'UCEPROTECT-L3', host: 'dnsbl-3.uceprotect.net' }
+                    { name: 'UCE-L1', host: 'dnsbl-1.uceprotect.net' },
+                    { name: 'DroneBL', host: 'dnsbl.dronebl.org' }
                 ];
 
-                for (let prov of dnsProviders) {
-                    for (let z of zones) {
-                        try {
-                            const resp = await fetch(prov.url(z.host), { headers: prov.h || {} });
-                            if (resp.ok) {
-                                const dns = await resp.json();
-                                if (dns.Answer && dns.Answer.length > 0) {
-                                    const val = dns.Answer[0].data;
-                                    if (val === '127.0.0.255') continue;
-                                    if (val.startsWith('127.0.0.')) return { listed: true, zone: `${z.name} (${prov.name})` };
+                // Race all providers for each zone
+                for (let z of zones) {
+                    try {
+                        const results = await Promise.all(dnsProviders.map(async prov => {
+                            try {
+                                const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(3000) });
+                                if (resp.ok) {
+                                    const dns = await resp.json();
+                                    if (dns.Answer && dns.Answer.length > 0) {
+                                        const val = dns.Answer[0].data;
+                                        if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) return { listed: true, zone: `${z.name} (${prov.name})` };
+                                    }
                                 }
-                            }
-                        } catch (e) { }
-                    }
+                            } catch (e) { }
+                            return null;
+                        }));
+                        const found = results.find(r => r && r.listed);
+                        if (found) return found;
+                    } catch (e) { }
                 }
+
                 return { listed: false };
             }
 
