@@ -1510,26 +1510,23 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. LOCAL PROXY
-                try {
-                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        if(data.listed) return { listed: true, zone: data.listedOn.join(', ') };
-                    }
-                } catch (e) { }
-
-                // 2. SIA API
+                // 1. Spamhaus SIA API (Mirroring check.spamhaus.org results)
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
-                            headers: { 'Authorization': `Bearer ${sToken}` }
+                            headers: { 
+                                'Authorization': `Bearer ${sToken}`,
+                                'Accept': 'application/json'
+                            }
                         });
                         if (resp.ok) {
                             const data = await resp.json();
                             if(data && data.lists && data.lists.length > 0) {
-                                return { listed: true, zone: `Spamhaus (${data.lists[0].name})` };
+                                const types = data.lists.map(l => l.name).join(', ');
+                                return { listed: true, zone: `SIA: ${types}` };
                             }
+                        } else if (resp.status === 401 || resp.status === 403) {
+                            console.error("Spamhaus SIA Token Invalid or Expired");
                         }
                     } catch (e) { }
                 }
