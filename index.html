@@ -1448,11 +1448,12 @@
                 alert(`Failed to add servers. ${errors} line(s) had an incorrect format. Make sure you use 9 parts separated by semicolons.`);
             }
         };
+
         window.runAutoScan = async function() {
             const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
             const allIPs = [];
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 ips.forEach(ip => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     allIPs.push({ ip, trackId });
@@ -1471,31 +1472,27 @@
             btn.style.opacity = '0.5';
             progressContainer.style.display = 'block';
 
-            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase(); // mon, tue...
+            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase(); 
             const hetrixKey = window.settings.hetrixKey;
             const spamhausToken = window.settings.spamhausToken;
-
-            if(!hetrixKey && !spamhausToken) {
-                alert("Note: No API Keys (Hetrix/Spamhaus) found in Settings. Running in SIMULATION mode.");
-            }
             
-            // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. LOCAL DNSBL PROXY (most reliable - uses server's own DNS resolver)
+                const zenZones = [
+                    { name: 'Spamhaus (SBL)', code: '127.0.0.2' },
+                    { name: 'Spamhaus (CSS)', code: '127.0.0.3' },
+                    { name: 'Spamhaus (XBL/PBL)', code: '127.0.0.' }
+                ];
+                const revIp = ip.split('.').reverse().join('.');
                 try {
-                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        if(data.listed) {
-                            return { listed: true, zone: data.listedOn.join(', ') };
-                        }
-                        return { listed: false };
+                    const resp = await fetch(`https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A`);
+                    const dns = await resp.json();
+                    if (dns.Answer && dns.Answer.length > 0) {
+                        const val = dns.Answer[0].data;
+                        const match = zenZones.find(z => z.code === val || (z.code.endsWith('.') && val.startsWith(z.code)));
+                        return { listed: true, zone: match ? match.name : 'Spamhaus ZEN' };
                     }
-                } catch (e) {
-                    // Proxy not running, fall through to other methods
-                }
+                } catch (e) { }
 
-                // 2. HetrixTools API
                 if(hKey) {
                     try {
                         const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
@@ -1508,7 +1505,6 @@
                     } catch (e) { }
                 }
 
-                // 3. Spamhaus SIA API
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
@@ -1523,63 +1519,55 @@
                     } catch (e) { }
                 }
 
-                // 4. DoH Fallback (limited - many DNSBLs block public resolvers)
-                const zones = [
-                    { name: 'UCEPROTECT-1', zone: 'dnsbl-1.uceprotect.net' },
-                    { name: 'DroneRL', zone: 'dnsbl.dronebl.org' },
-                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' }
+                const otherZones = [
+                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
+                    { name: 'UCEPROTECT', zone: 'dnsbl-1.uceprotect.net' }
                 ];
-                const revIp = ip.split('.').reverse().join('.');
-                for (let z of zones) {
+                for (let z of otherZones) {
                     try {
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) {
-                            const val = dns.Answer[0].data;
-                            if (val.startsWith('127.0.0.')) {
-                                return { listed: true, zone: z.name };
-                            }
-                        }
+                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: z.name };
                     } catch (e) { }
                 }
                 return { listed: false };
             }
 
-            for(let i=0; i < allIPs.length; i++) {
-                const item = allIPs[i];
-                const perc = Math.round(((i + 1) / allIPs.length) * 100);
+            const batchSize = 5;
+            for (let i = 0; i < allIPs.length; i += batchSize) {
+                const batch = allIPs.slice(i, i + batchSize);
+                statusText.innerText = `Scanning batch ${Math.floor(i/batchSize) + 1}...`;
                 
-                statusText.textContent = `Checking ${item.ip}...`;
-                progressBar.style.width = `${perc}%`;
-                progressPerc.textContent = `${perc}%`;
+                await Promise.all(batch.map(async (item) => {
+                    const result = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
+                    if(!window.trackingData[item.trackId]) {
+                        window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
+                    }
+                    
+                    if(result.listed) {
+                        window.trackingData[item.trackId][today] = 'LISTED';
+                        window.trackingData[item.trackId].notes = `Listed: ${result.zone} (${new Date().toLocaleDateString()})`;
+                    } else {
+                        window.trackingData[item.trackId][today] = 'CLEAN';
+                        window.trackingData[item.trackId].notes = '';
+                    }
+                }));
 
-                // Run Multi-Source Check
-                const hetrixKey = window.settings.hetrixKey;
-                const check = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
-                let result = check.listed ? 'LISTED' : 'CLEAN';
-
-                if(!window.trackingData[item.trackId]) {
-                    window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
-                }
-                
-                window.trackingData[item.trackId][today] = result;
-                if(check.listed) {
-                    window.trackingData[item.trackId].notes = `Listed: ${check.zone}`;
-                }
-
-                window.renderTrackingTable();
-                await new Promise(r => setTimeout(r, 150));
+                const perc = Math.min(100, Math.round(((i + batchSize) / allIPs.length) * 100));
+                progressBar.style.width = perc + '%';
+                progressPerc.innerText = perc + '%';
             }
 
-            statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
-            btn.disabled = false;
-            btn.style.opacity = '1';
+            statusText.innerText = 'Scan Complete! Saving...';
+            window.saveData();
+            window.renderTrackingTable();
             
             setTimeout(() => {
                 progressContainer.style.display = 'none';
-            }, 3000);
-            
-            window.saveData();
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                alert(`Scan finished for ${allIPs.length} IPs.`);
+            }, 1000);
         };
 
         window.copyIpsByStatus = function(status) {
@@ -2985,7 +2973,7 @@
             let html = '';
             
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 if (ips.length === 0) ips.push('No IP');
                 
                 ips.forEach((ip, idx) => {
@@ -3006,10 +2994,19 @@
                         return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:${bg}; border:1px solid transparent; color:${color}; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
                     }).join('');
                     
-                    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <td style="font-weight:600; font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${idx === 0 ? s.name : '<span style="color:var(--text-secondary); margin-left:1rem;">↳</span>'}</td>
-                        <td style="font-family:monospace; color:var(--accent-color); font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${ip}</td>
-                        <td style="padding: 8px 10px; white-space:nowrap;"><span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
+                    const isListedToday = todayVal === 'LISTED';
+                    const trBg = isListedToday ? 'rgba(239, 68, 68, 0.08)' : 'transparent';
+                    const isLastIp = idx === ips.length - 1;
+                    const rowBorder = isLastIp ? '2px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)';
+
+                    html += `<tr style="border-bottom:${rowBorder}; background:${trBg};">
+                        ${idx === 0 ? `<td rowspan="${ips.length}" style="font-weight:700; font-size:0.85rem; padding: 15px 10px; color:var(--accent-color); border-right:1px solid rgba(255,255,255,0.05); text-align:center; vertical-align:middle;">${s.name}</td>` : ''}
+                        <td style="font-family:monospace; color:white; font-size:0.85rem; padding: 12px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <a href="https://check.spamhaus.org/query/ip/${ip}" target="_blank" style="color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                                ${ip} <i data-lucide="external-link" style="width:12px; height:12px; opacity:0.4;"></i>
+                            </a>
+                        </td>
+                        <td style="padding: 8px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
                         ${dayCells}
                         <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:120px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px; border-radius:4px; font-size:0.75rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
                     </tr>`;
@@ -3025,7 +3022,7 @@
             if(distContainer && distInner) {
                 const types = {};
                 teamServers.forEach(s => {
-                    const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                    const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     ips.forEach(ip => {
                         const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                         const trk = window.trackingData[trackId] || {};
