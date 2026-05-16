@@ -1539,20 +1539,19 @@
                 const dnsProviders = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'Mullvad', url: (z) => `https://doh.mullvad.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` },
                     { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} }
+                    { name: 'LibreDNS', url: (z) => `https://doh.libredns.gr/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} }
                 ];
                 
                 const zones = [
-                    { name: 'SBL', host: 'sbl.spamhaus.org' },
-                    { name: 'CSS', host: 'css.spamhaus.org' },
-                    { name: 'BARRACUDA', host: 'b.barracudacentral.org' },
+                    { name: 'CSS', host: 'css.spamhaus.org', code: '127.0.0.3' },
+                    { name: 'SBL', host: 'sbl.spamhaus.org', code: '127.0.0.2' },
+                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', code: '127.0.0.2' },
                     { name: 'ZEN', host: 'zen.spamhaus.org' },
                     { name: 'XBL', host: 'xbl.spamhaus.org' },
-                    { name: 'PBL', host: 'pbl.spamhaus.org' },
-                    { name: 'SpamCop', host: 'bl.spamcop.net' },
-                    { name: 'DroneBL', host: 'dnsbl.dronebl.org' }
+                    { name: 'PBL', host: 'pbl.spamhaus.org' }
                 ];
 
                 // Race all providers for each zone
