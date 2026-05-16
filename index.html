@@ -1482,7 +1482,18 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Spamhaus SIA API (The gold standard)
+                // 1. LOCAL DNSBL PROXY (Most Reliable - uses your own DNS)
+                try {
+                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if(data.listed) {
+                            return { listed: true, zone: data.listedOn.join(', ') };
+                        }
+                    }
+                } catch (e) { }
+
+                // 2. Spamhaus SIA API (Official)
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
@@ -1497,43 +1508,29 @@
                     } catch (e) { }
                 }
 
-                // 2. High-Resiliency DNSBL (Multi-Provider Fallback)
+                // 3. DNSBL Fallback (DoH)
                 const revIp = ip.split('.').reverse().join('.');
                 const providers = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, headers: { 'Accept': 'application/dns-json' } },
-                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, headers: { 'Accept': 'application/dns-json' } }
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` }
                 ];
-                
-                const criticalZones = ['sbl.spamhaus.org', 'css.spamhaus.org', 'xbl.spamhaus.org', 'zen.spamhaus.org'];
+                const zones = ['zen.spamhaus.org', 'sbl.spamhaus.org', 'css.spamhaus.org', 'bl.spamcop.net'];
 
                 for (let provider of providers) {
-                    for (let zone of criticalZones) {
+                    for (let zone of zones) {
                         try {
                             const resp = await fetch(provider.url(zone), { headers: provider.headers || {} });
                             if (resp.ok) {
                                 const dns = await resp.json();
                                 if (dns.Answer && dns.Answer.length > 0) {
                                     const val = dns.Answer[0].data;
-                                    // Ignore refusal codes
-                                    if (val === '127.0.0.255') continue;
-                                    if (val.startsWith('127.0.0.')) {
+                                    if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
                                         return { listed: true, zone: `${zone.split('.')[0].toUpperCase()} (${provider.name})` };
                                     }
                                 }
                             }
                         } catch (e) { }
                     }
-                }
-
-                // 3. Fallback to common RBLs
-                const backups = ['bl.spamcop.net', 'dnsbl-1.uceprotect.net'];
-                for (let zone of backups) {
-                    try {
-                        const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${zone}&type=A`);
-                        const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: zone.split('.')[0] };
-                    } catch (e) { }
                 }
 
                 return { listed: false };
