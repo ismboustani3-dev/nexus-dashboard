@@ -1482,7 +1482,7 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. Spamhaus SIA API (Priority 1: Most accurate)
+                // 1. Spamhaus SIA API (Priority 1: Official & 100% Reliable)
                 if(sToken) {
                     try {
                         const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
@@ -1497,7 +1497,39 @@
                     } catch (e) { }
                 }
 
-                // 2. HetrixTools API (Priority 2)
+                // 2. DNSBL Fallback (Try Multiple DoH Providers)
+                const revIp = ip.split('.').reverse().join('.');
+                const dnsProviders = [
+                    { name: 'Google', url: `https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A` },
+                    { name: 'Quad9', url: `https://dns.quad9.net/dns-query?name=${revIp}.zen.spamhaus.org&type=A`, headers: { 'Accept': 'application/dns-json' } }
+                ];
+
+                const zenCodes = {
+                    '127.0.0.2': 'Spamhaus SBL',
+                    '127.0.0.3': 'Spamhaus CSS',
+                    '127.0.0.4': 'Spamhaus XBL',
+                    '127.0.0.9': 'Spamhaus SBL',
+                    '127.0.0.10': 'Spamhaus PBL',
+                    '127.0.0.11': 'Spamhaus PBL'
+                };
+
+                for (let provider of dnsProviders) {
+                    try {
+                        const resp = await fetch(provider.url, { headers: provider.headers || {} });
+                        if (resp.ok) {
+                            const dns = await resp.json();
+                            if (dns.Answer && dns.Answer.length > 0) {
+                                const val = dns.Answer[0].data;
+                                if (val === '127.0.0.255') continue; // Refused by this provider, try next one
+                                
+                                if (zenCodes[val]) return { listed: true, zone: zenCodes[val] };
+                                if (val.startsWith('127.0.0.')) return { listed: true, zone: `Spamhaus (${provider.name})` };
+                            }
+                        }
+                    } catch (e) { }
+                }
+
+                // 3. HetrixTools API (Backup)
                 if(hKey) {
                     try {
                         const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
@@ -1510,35 +1542,10 @@
                     } catch (e) { }
                 }
 
-                // 3. DNSBL via DoH (Priority 3 - Fallback)
-                const zenCodes = {
-                    '127.0.0.2': 'Spamhaus SBL',
-                    '127.0.0.3': 'Spamhaus CSS',
-                    '127.0.0.4': 'Spamhaus XBL',
-                    '127.0.0.9': 'Spamhaus SBL',
-                    '127.0.0.10': 'Spamhaus PBL',
-                    '127.0.0.11': 'Spamhaus PBL'
-                };
-                const revIp = ip.split('.').reverse().join('.');
-                try {
-                    const resp = await fetch(`https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A`);
-                    const dns = await resp.json();
-                    if (dns.Answer && dns.Answer.length > 0) {
-                        const val = dns.Answer[0].data;
-                        
-                        // ⛔ Filter out Service Refused
-                        if (val === '127.0.0.255') return { listed: false };
-                        
-                        // Detect specific type
-                        if (zenCodes[val]) return { listed: true, zone: zenCodes[val] };
-                        if (val.startsWith('127.0.0.')) return { listed: true, zone: 'Spamhaus (ZEN)' };
-                    }
-                } catch (e) { }
-
+                // 4. Other DNSBLs
                 const otherZones = [
                     { name: 'SpamCop', zone: 'bl.spamcop.net' },
-                    { name: 'UCEPROTECT', zone: 'dnsbl-1.uceprotect.net' },
-                    { name: 'SORBS', zone: 'dnsbl.sorbs.net' }
+                    { name: 'UCEPROTECT', zone: 'dnsbl-1.uceprotect.net' }
                 ];
                 for (let z of otherZones) {
                     try {
