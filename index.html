@@ -612,18 +612,24 @@
         </div>
 
         <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
-            <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
                 <div>
-                    <h2>IP Blacklist</h2>
-                    <p>Track the daily status of your IPs across teams.</p>
+                    <h1 style="font-family: 'Outfit'; margin:0;">IP Blacklist</h1>
+                    <p style="color:var(--text-secondary); font-size:0.9rem;">Track the daily status of your IPs across teams.</p>
+                </div>
+                <div class="tab-group" style="background:rgba(255,255,255,0.05); padding:4px; border-radius:12px; display:flex; gap:5px;">
+                    <button class="tab-btn active" onclick="window.switchTrackTab('current', this)" style="background:transparent; border:none; color:white; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">Current Week</button>
+                    <button class="tab-btn" onclick="window.switchTrackTab('history', this)" style="background:transparent; border:none; color:var(--text-secondary); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">Historical Blacklist</button>
                 </div>
                 <div id="schedulerStatus" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px;">
                     <div style="width:8px; height:8px; background:#00f2fe; border-radius:50%; animation: pulse 2s infinite;"></div>
-                    <span style="font-size:0.7rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
+                    <span style="font-size:0.8rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
                 </div>
-                <style>
-                    @keyframes pulse { 0% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.4; transform: scale(1); } }
-                </style>
+            </div>
+
+            <!-- History Date Selector (Hidden by default) -->
+            <div id="trackHistorySelector" style="display:none; margin-bottom:2rem; overflow-x:auto; white-space:nowrap; padding:15px 0; gap:10px; border-bottom:1px solid var(--border-color);" class="custom-scrollbar">
+                <!-- Dates will be injected here -->
             </div>
             
             <div style="text-align: center; margin-bottom: 1.5rem;">
@@ -1109,6 +1115,8 @@
 
         window.trackingData = {};
         window.activeTrackTeam = 1;
+        window.activeTrackTab = 'current';
+        window.selectedHistoryDate = '';
 
         window._dataLoaded = false; // Safety flag: true only after Firebase data is fully loaded
 
@@ -1555,11 +1563,15 @@
                         window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     }
                     
+                    const dateKey = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
                     if(result.listed) {
                         window.trackingData[item.trackId][today] = 'LISTED';
+                        window.trackingData[item.trackId][dateKey] = 'LISTED';
+                        window.trackingData[item.trackId][`${dateKey}_zone`] = result.zone;
                         window.trackingData[item.trackId].notes = `Listed: ${result.zone} (${new Date().toLocaleDateString()})`;
                     } else {
                         window.trackingData[item.trackId][today] = 'CLEAN';
+                        window.trackingData[item.trackId][dateKey] = 'CLEAN';
                         window.trackingData[item.trackId].notes = '';
                     }
                 }));
@@ -2963,6 +2975,49 @@
                     input.style.background = 'rgba(0,0,0,0.2)';
                 }
             }
+        window.switchTrackTab = function(tab, btn) {
+            window.activeTrackTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'transparent';
+                b.style.color = 'var(--text-secondary)';
+            });
+            btn.classList.add('active');
+            btn.style.background = 'var(--accent-gradient)';
+            btn.style.color = 'black';
+
+            const selector = document.getElementById('trackHistorySelector');
+            if(tab === 'history') {
+                selector.style.display = 'flex';
+                window.renderHistoryDateSelector();
+            } else {
+                selector.style.display = 'none';
+            }
+            window.renderTrackingTable();
+        };
+
+        window.renderHistoryDateSelector = function() {
+            const container = document.getElementById('trackHistorySelector');
+            if(!container) return;
+            
+            const dates = new Set();
+            Object.values(window.trackingData).forEach(trk => {
+                Object.keys(trk).forEach(key => {
+                    if(/^\d{4}-\d{2}-\d{2}$/.test(key)) dates.add(key);
+                });
+            });
+
+            const sortedDates = Array.from(dates).sort().reverse();
+            if(!window.selectedHistoryDate && sortedDates.length > 0) {
+                window.selectedHistoryDate = sortedDates[0];
+            }
+
+            container.innerHTML = sortedDates.map(date => {
+                const isActive = date === window.selectedHistoryDate;
+                const bg = isActive ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)';
+                const color = isActive ? 'black' : 'white';
+                return `<button onclick="window.selectedHistoryDate='${date}'; window.renderHistoryDateSelector(); window.renderTrackingTable();" style="background:${bg}; color:${color}; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:700; font-family:'Outfit'; transition:0.3s; min-width:140px;">${date}</button>`;
+            }).join('');
         };
 
         window.renderTrackingTable = function() {
@@ -2991,35 +3046,58 @@
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     
-                    const todayVal = (trk[today] || '').toUpperCase().trim();
-                    if(todayVal === 'CLEAN') cleanCount++;
-                    if(todayVal === 'LISTED') listedCount++;
+                    let statusForDisplay = '';
+                    let zoneForDisplay = '';
 
-                    let dayCells = days.map(d => {
-                        const val = (trk[d] || '').toUpperCase().trim();
-                        let color = 'white';
-                        let bg = 'rgba(0,0,0,0.2)';
-                        if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
-                        if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
+                    if (window.activeTrackTab === 'history' && window.selectedHistoryDate) {
+                        statusForDisplay = (trk[window.selectedHistoryDate] || '').toUpperCase().trim();
+                        zoneForDisplay = trk[`${window.selectedHistoryDate}_zone`] || '';
+                    } else {
+                        statusForDisplay = (trk[today] || '').toUpperCase().trim();
+                    }
+
+                    if(statusForDisplay === 'CLEAN') cleanCount++;
+                    if(statusForDisplay === 'LISTED') listedCount++;
+
+                    let dayCells = '';
+                    if (window.activeTrackTab === 'history') {
+                        let color = 'var(--text-secondary)';
+                        let bg = 'rgba(255,255,255,0.02)';
+                        if(statusForDisplay === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
+                        if(statusForDisplay === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
                         
-                        return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:${bg}; border:1px solid transparent; color:${color}; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
-                    }).join('');
+                        dayCells = `<td colspan="7" style="padding:4px; text-align:center;">
+                            <span style="background:${bg}; color:${color}; padding:8px 20px; border-radius:8px; font-size:1rem; font-weight:800; border:1px solid rgba(255,255,255,0.05); display:inline-block; min-width:150px;">
+                                ${statusForDisplay || 'NO DATA'} ${zoneForDisplay ? `(${zoneForDisplay})` : ''}
+                            </span>
+                        </td>`;
+                    } else {
+                        dayCells = days.map(d => {
+                            const val = (trk[d] || '').toUpperCase().trim();
+                            let color = 'white';
+                            let bg = 'rgba(0,0,0,0.2)';
+                            if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
+                            if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
+                            
+                            return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:60px; background:${bg}; border:1px solid transparent; color:${color}; padding:10px 4px; border-radius:6px; font-size:0.9rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
+                        }).join('');
+                    }
                     
-                    const isListedToday = todayVal === 'LISTED';
+                    const isListedToday = statusForDisplay === 'LISTED';
                     const trBg = isListedToday ? 'rgba(239, 68, 68, 0.08)' : 'transparent';
                     const isLastIp = idx === ips.length - 1;
                     const rowBorder = isLastIp ? '2px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)';
 
                     html += `<tr style="border-bottom:${rowBorder}; background:${trBg};">
-                        ${idx === 0 ? `<td rowspan="${ips.length}" style="font-weight:700; font-size:0.85rem; padding: 15px 10px; color:var(--accent-color); border-right:1px solid rgba(255,255,255,0.05); text-align:center; vertical-align:middle;">${s.name}</td>` : ''}
-                        <td style="font-family:monospace; color:white; font-size:0.85rem; padding: 12px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <a href="https://check.spamhaus.org/query/ip/${ip}" target="_blank" style="color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-                                ${ip} <i data-lucide="external-link" style="width:12px; height:12px; opacity:0.4;"></i>
+                        ${idx === 0 ? `<td rowspan="${ips.length}" style="font-weight:700; font-size:1rem; padding: 15px 10px; color:var(--accent-color); border-right:1px solid rgba(255,255,255,0.05); text-align:center; vertical-align:middle;">${s.name}</td>` : ''}
+                        <td style="font-family:monospace; color:white; font-size:1rem; padding: 12px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;">
+                            <a href="https://check.spamhaus.org/query/ip/${ip}" target="_blank" style="color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
+                                ${ip} <i data-lucide="external-link" style="width:14px; height:14px; opacity:0.4;"></i>
                             </a>
                         </td>
-                        <td style="padding: 8px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
+                        <td style="padding: 8px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:4px 12px; border-radius:6px; font-size:0.8rem;">${s.owner || '-'}</span></td>
                         ${dayCells}
-                        <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:120px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px; border-radius:4px; font-size:0.75rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
+                        <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" ${window.activeTrackTab === 'history' ? 'readonly' : ''} oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:150px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:10px; border-radius:6px; font-size:0.9rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
                     </tr>`;
                 });
             });
