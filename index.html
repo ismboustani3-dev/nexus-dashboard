@@ -1534,51 +1534,54 @@
                     } catch (e) { }
                 }
 
-                // 3. TURBO-RACE MULTI-DNS (Parallel queries to all providers)
+                // 3. TURBO-RACE MULTI-DNS (Full Parallel)
                 const revIp = ip.split('.').reverse().join('.');
                 const dnsProviders = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
-                    { name: 'Mullvad', url: (z) => `https://doh.mullvad.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
-                    { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'LibreDNS', url: (z) => `https://doh.libredns.gr/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} }
+                    { name: 'OpenDNS', url: (z) => `https://doh.opendns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` }
                 ];
                 
                 const zones = [
-                    { name: 'CSS', host: 'css.spamhaus.org', code: '127.0.0.3' },
-                    { name: 'SBL', host: 'sbl.spamhaus.org', code: '127.0.0.2' },
-                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', code: '127.0.0.2' },
-                    { name: 'ZEN', host: 'zen.spamhaus.org' },
-                    { name: 'XBL', host: 'xbl.spamhaus.org' },
-                    { name: 'PBL', host: 'pbl.spamhaus.org' }
+                    { name: 'CSS', host: 'css.spamhaus.org', priority: 1 },
+                    { name: 'SBL', host: 'sbl.spamhaus.org', priority: 2 },
+                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', priority: 3 },
+                    { name: 'ZEN', host: 'zen.spamhaus.org', priority: 4 },
+                    { name: 'XBL', host: 'xbl.spamhaus.org', priority: 5 },
+                    { name: 'PBL', host: 'pbl.spamhaus.org', priority: 6 }
                 ];
 
-                // Race all providers for each zone
-                for (let z of zones) {
-                    try {
-                        const results = await Promise.all(dnsProviders.map(async prov => {
-                            try {
-                                const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(2000) });
-                                if (resp.ok) {
-                                    const dns = await resp.json();
-                                    if (dns.Answer && dns.Answer.length > 0) {
-                                        const val = dns.Answer[0].data;
-                                        if (val === '127.0.0.255') return null;
-                                        if (val.startsWith('127.0.0.')) {
-                                            let zoneName = z.name;
-                                            if (z.host.includes('barracuda') && val === '127.0.0.2') zoneName = 'BARRACUDA';
-                                            return { listed: true, zone: `${zoneName} (${prov.name})` };
+                try {
+                    // Check all zones and all providers simultaneously
+                    const allQueries = [];
+                    zones.forEach(z => {
+                        dnsProviders.forEach(prov => {
+                            allQueries.push((async () => {
+                                try {
+                                    const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(2500) });
+                                    if (resp.ok) {
+                                        const dns = await resp.json();
+                                        if (dns.Answer && dns.Answer.length > 0) {
+                                            const val = dns.Answer[0].data;
+                                            if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
+                                                return { listed: true, zone: z.name, priority: z.priority, prov: prov.name };
+                                            }
                                         }
                                     }
-                                }
-                            } catch (e) { }
-                            return null;
-                        }));
-                        const found = results.find(r => r && r.listed);
-                        if (found) return found;
-                    } catch (e) { }
-                }
+                                } catch (e) { }
+                                return null;
+                            })());
+                        });
+                    });
+
+                    const results = await Promise.all(allQueries);
+                    const validResults = results.filter(r => r && r.listed).sort((a, b) => a.priority - b.priority);
+                    
+                    if (validResults.length > 0) {
+                        return { listed: true, zone: `${validResults[0].zone} (${validResults[0].prov})` };
+                    }
+                } catch (e) { }
 
                 return { listed: false };
             }
