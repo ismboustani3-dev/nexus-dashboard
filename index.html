@@ -1482,21 +1482,22 @@
             
             // Ultra-Reliable Multi-Source IP Reputation Engine
             async function checkIpStatus(ip, sToken, hKey) {
-                // 1. LOCAL DNSBL PROXY (most reliable - uses server's own DNS resolver)
-                try {
-                    const resp = await fetch(`http://localhost:8082/check?ip=${ip}`);
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        if(data.listed) {
-                            return { listed: true, zone: data.listedOn.join(', ') };
+                // 1. Spamhaus SIA API (Priority 1: Most accurate)
+                if(sToken) {
+                    try {
+                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
+                            headers: { 'Authorization': `Bearer ${sToken}` }
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if(data && data.lists && data.lists.length > 0) {
+                                return { listed: true, zone: `Spamhaus (${data.lists[0].name})` };
+                            }
                         }
-                        return { listed: false };
-                    }
-                } catch (e) {
-                    // Proxy not running, fall through to other methods
+                    } catch (e) { }
                 }
 
-                // 2. HetrixTools API
+                // 2. HetrixTools API (Priority 2)
                 if(hKey) {
                     try {
                         const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
@@ -1509,78 +1510,82 @@
                     } catch (e) { }
                 }
 
-                // 3. Spamhaus SIA API
-                if(sToken) {
-                    try {
-                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
-                            headers: { 'Authorization': `Bearer ${sToken}` }
-                        });
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
-                                return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
-                            }
-                        }
-                    } catch (e) { }
-                }
+                // 3. DNSBL via DoH (Priority 3 - Fallback)
+                const zenCodes = {
+                    '127.0.0.2': 'Spamhaus SBL',
+                    '127.0.0.3': 'Spamhaus CSS',
+                    '127.0.0.4': 'Spamhaus XBL',
+                    '127.0.0.9': 'Spamhaus SBL',
+                    '127.0.0.10': 'Spamhaus PBL',
+                    '127.0.0.11': 'Spamhaus PBL'
+                };
+                const revIp = ip.split('.').reverse().join('.');
+                try {
+                    const resp = await fetch(`https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A`);
+                    const dns = await resp.json();
+                    if (dns.Answer && dns.Answer.length > 0) {
+                        const val = dns.Answer[0].data;
+                        
+                        // ⛔ Filter out Service Refused
+                        if (val === '127.0.0.255') return { listed: false };
+                        
+                        // Detect specific type
+                        if (zenCodes[val]) return { listed: true, zone: zenCodes[val] };
+                        if (val.startsWith('127.0.0.')) return { listed: true, zone: 'Spamhaus (ZEN)' };
+                    }
+                } catch (e) { }
 
-                // 4. DoH Fallback (limited - many DNSBLs block public resolvers)
-                const zones = [
-                    { name: 'UCEPROTECT-1', zone: 'dnsbl-1.uceprotect.net' },
-                    { name: 'DroneRL', zone: 'dnsbl.dronebl.org' },
+                const otherZones = [
+                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
+                    { name: 'UCEPROTECT', zone: 'dnsbl-1.uceprotect.net' },
                     { name: 'SORBS', zone: 'dnsbl.sorbs.net' }
                 ];
-                const revIp = ip.split('.').reverse().join('.');
-                for (let z of zones) {
+                for (let z of otherZones) {
                     try {
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
-                        if (dns.Answer && dns.Answer.length > 0) {
-                            const val = dns.Answer[0].data;
-                            if (val.startsWith('127.0.0.')) {
-                                return { listed: true, zone: z.name };
-                            }
-                        }
+                        if (dns.Answer && dns.Answer.length > 0) return { listed: true, zone: z.name };
                     } catch (e) { }
                 }
                 return { listed: false };
             }
 
-            for(let i=0; i < allIPs.length; i++) {
-                const item = allIPs[i];
-                const perc = Math.round(((i + 1) / allIPs.length) * 100);
+            // High Performance Parallel Scanning (Batch size 5)
+            const batchSize = 5;
+            for (let i = 0; i < allIPs.length; i += batchSize) {
+                const batch = allIPs.slice(i, i + batchSize);
+                statusText.innerText = `Scanning batch ${Math.floor(i/batchSize) + 1}...`;
                 
-                statusText.textContent = `Checking ${item.ip}...`;
-                progressBar.style.width = `${perc}%`;
-                progressPerc.textContent = `${perc}%`;
+                await Promise.all(batch.map(async (item) => {
+                    const result = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
+                    if(!window.trackingData[item.trackId]) {
+                        window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
+                    }
+                    
+                    if(result.listed) {
+                        window.trackingData[item.trackId][today] = 'LISTED';
+                        window.trackingData[item.trackId].notes = `Listed: ${result.zone} (${new Date().toLocaleDateString()})`;
+                    } else {
+                        window.trackingData[item.trackId][today] = 'CLEAN';
+                        window.trackingData[item.trackId].notes = '';
+                    }
+                }));
 
-                // Run Multi-Source Check
-                const hetrixKey = window.settings.hetrixKey;
-                const check = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
-                let result = check.listed ? 'LISTED' : 'CLEAN';
-
-                if(!window.trackingData[item.trackId]) {
-                    window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
-                }
-                
-                window.trackingData[item.trackId][today] = result;
-                if(check.listed) {
-                    window.trackingData[item.trackId].notes = `Listed: ${check.zone}`;
-                }
-
-                window.renderTrackingTable();
-                await new Promise(r => setTimeout(r, 150));
+                const perc = Math.min(100, Math.round(((i + batchSize) / allIPs.length) * 100));
+                progressBar.style.width = perc + '%';
+                progressPerc.innerText = perc + '%';
             }
 
-            statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
-            btn.disabled = false;
-            btn.style.opacity = '1';
+            statusText.innerText = 'Scan Complete! Saving...';
+            window.saveData();
+            window.renderTrackingTable();
             
             setTimeout(() => {
                 progressContainer.style.display = 'none';
-            }, 3000);
-            
-            window.saveData();
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                alert(`Scan finished for ${allIPs.length} IPs.`);
+            }, 1000);
         };
 
         window.copyIpsByStatus = function(status) {
