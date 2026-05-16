@@ -126,13 +126,6 @@
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #6366f1; }
         input:checked + .slider:before { transform: translateX(20px); }
-        
-        .switch-small { position: relative; display: inline-block; width: 36px; height: 20px; }
-        .switch-small input { opacity: 0; width: 0; height: 0; }
-        .slider-small { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .4s; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .slider-small:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider-small { background-color: var(--accent-color); }
-        input:checked + .slider-small:before { transform: translateX(16px); }
 
         .btn-dns-start { width: 100%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 1.5rem; transition: transform 0.2s, box-shadow 0.2s; }
         .btn-dns-start:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
@@ -147,30 +140,6 @@
         .dns-progress-info { display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.8rem; color:#94a3b8; font-weight:600; }
         .dns-progress-bar { height: 8px; background: #030712; border-radius: 4px; overflow: hidden; }
         .dns-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6366f1, #a855f7); transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-
-        /* History Tab Styles */
-        .tab-btn { background:transparent; border:none; color:var(--text-secondary); padding:8px 16px; border-radius:8px; font-size:0.75rem; font-weight:600; cursor:pointer; transition:0.2s; }
-        .tab-btn:hover { color:white; }
-        .tab-btn.active { background:var(--accent-color); color:black; }
-
-        .history-date-card { 
-            display: inline-flex; 
-            flex-direction: column; 
-            align-items: center; 
-            background: rgba(255,255,255,0.03); 
-            border: 2px solid transparent; 
-            border-radius: 12px; 
-            padding: 12px 20px; 
-            margin-right: 10px; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            min-width: 90px;
-        }
-        .history-date-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
-        .history-date-card.active { border-color: var(--accent-color); background: rgba(0,242,254,0.05); }
-        .history-date-card .year { font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 2px; }
-        .history-date-card .date { font-size: 1rem; font-weight: 800; color: white; }
-        .history-date-card .status { font-size: 0.55rem; color: #10b981; font-weight: 700; margin-top: 4px; text-transform: uppercase; }
 
         .dns-actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
         .dns-action-btn { background: #1f2937; color: #d1d5db; border: 1px solid #374151; padding: 8px 16px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
@@ -643,14 +612,10 @@
         </div>
 
         <div id="trackingView" class="view" style="display:none; padding: 0 2rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+            <div class="bl-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <h1 style="font-family: 'Outfit'; margin:0;">IP Blacklist</h1>
-                    <p style="color:var(--text-secondary); font-size:0.85rem;">Track the daily status of your IPs across teams.</p>
-                </div>
-                <div class="tab-group" style="background:rgba(255,255,255,0.05); padding:4px; border-radius:12px; display:flex; gap:5px;">
-                    <button class="tab-btn active" onclick="window.switchTrackTab('current', this)">Current Week</button>
-                    <button class="tab-btn" onclick="window.switchTrackTab('history', this)">Historical Blacklist</button>
+                    <h2>IP Blacklist</h2>
+                    <p>Track the daily status of your IPs across teams.</p>
                 </div>
                 <div id="schedulerStatus" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px;">
                     <div style="width:8px; height:8px; background:#00f2fe; border-radius:50%; animation: pulse 2s infinite;"></div>
@@ -659,11 +624,6 @@
                 <style>
                     @keyframes pulse { 0% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.4; transform: scale(1); } }
                 </style>
-            </div>
-
-            <!-- History Date Selector (Hidden by default) -->
-            <div id="trackHistorySelector" style="display:none; margin-bottom:2rem; overflow-x:auto; white-space:nowrap; padding:15px 0; gap:10px; border-bottom:1px solid var(--border-color);" class="custom-scrollbar">
-                <!-- Dates will be injected here -->
             </div>
             
             <div style="text-align: center; margin-bottom: 1.5rem;">
@@ -714,18 +674,10 @@
                 </div>
             </div>
             
-             <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px; align-items:center;">
+            <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px;">
                 <button class="bl-btn bl-btn-primary" onclick="window.saveData()"><i data-lucide="save"></i> Save Changes</button>
                 <button class="bl-btn bl-btn-success" onclick="window.exportTrackingCSV()"><i data-lucide="download"></i> Export CSV</button>
                 <button id="autoScanBtn" class="bl-btn" onclick="window.runAutoScan()" style="background:var(--accent-color); color:black; border:none; font-weight:700;"><i data-lucide="zap"></i> Run Auto Scan</button>
-                
-                <div style="margin-left:auto; display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.05); padding:8px 15px; border-radius:10px; border:1px solid var(--border-color);">
-                    <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Schedule (09:00 AM)</span>
-                    <label class="switch-small">
-                        <input type="checkbox" id="autoScanToggle" onchange="window.toggleAutoScanSchedule(this.checked)">
-                        <span class="slider-small"></span>
-                    </label>
-                </div>
             </div>
 
             <div id="scanProgressBarContainer" style="display:none; margin-bottom: 1rem; background:rgba(255,255,255,0.05); border-radius:10px; padding:15px; border:1px solid rgba(0,242,254,0.1);">
@@ -1231,28 +1183,20 @@
                 
                 window._dataLoaded = true; // ✅ Data confirmed loaded — saveData now allowed
                 window.refreshUI();
-                
-                // Initialize toggles from settings
-                if(document.getElementById('autoScanToggle')) {
-                    document.getElementById('autoScanToggle').checked = !!window.settings.enableAutoScan;
-                }
-                
                 if(document.getElementById('trackingView').style.display !== 'none') window.renderTrackingTable();
                 
                 // Set up real-time listener
                 db.ref('nexus').on('value', (snapshot) => {
-                    const rData = snapshot.val();
-                    if(!rData) return; // ⛔ NEVER OVERWRITE WITH EMPTY STATE FROM CLOUD
+                    const rData = snapshot.val() || {};
+                    window.projects = rData.projects || [];
+                    window.servers = rData.servers || [];
+                    window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
+                    window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
+                    // History node ignored
+                    window.rdnsData = rData.rdnsData || {};
+                    window.remarques = rData.remarques || []; // Changed to array
                     
-                    if(rData.projects) window.projects = rData.projects;
-                    if(rData.servers) window.servers = rData.servers;
-                    if(rData.teams) window.teamNames = rData.teams;
-                    if(rData.settings) window.settings = rData.settings;
-                    if(rData.rdnsData) window.rdnsData = rData.rdnsData;
-                    if(rData.remarques) window.remarques = rData.remarques;
-                    
-                    if(window._dataLoaded) window.refreshUI();
-                });
+                    if(window.activeNoteId) {
                         const note = window.remarques.find(n => n.id === window.activeNoteId);
                         if(note) {
                             const titleEl = document.getElementById('activeNoteTitle');
@@ -1281,43 +1225,32 @@
         };
 
         window.fixOrphanedServers = function() {
-            const localBackup = localStorage.getItem('nexus_backup');
-            
-            if (window.servers.length === 0 && localBackup) {
-                const data = JSON.parse(localBackup);
-                if (confirm(`CRITICAL RECOVERY: Found local backup with ${data.servers?.length || 0} servers. Force restore everything?`)) {
-                    window.projects = data.projects || [];
-                    window.servers = data.servers || [];
-                    window.teamNames = data.teams || window.teamNames;
-                    window.settings = data.settings || window.settings;
-                    window.trackingData = data.tracking || {};
-                    window.saveData();
-                    window.refreshUI();
-                    alert("DATABASE RESTORED SUCCESSFULLY FROM LOCAL BACKUP!");
-                    return;
-                }
-            }
-
             let fixedCount = 0;
             let initialCount = window.servers.length;
             
+            // 1. Identify valid team IDs
             const validTeamIds = Object.keys(window.teamNames).map(k => k.replace('team',''));
             
+            // 2. Scan and repair
             window.servers = window.servers.map(s => {
                 const teamId = (s.team || '').toString();
                 if (!teamId || !validTeamIds.includes(teamId)) {
                     fixedCount++;
-                    return { ...s, team: '1' }; // Default to Team 1 instead of 'orphaned'
+                    return { ...s, team: 'orphaned' };
                 }
                 return s;
             });
             
             if (fixedCount > 0) {
+                // Ensure 'orphaned' team name exists
+                if (!window.teamNames.teamorphaned) {
+                    window.teamNames.teamorphaned = "⚠️ RECOVERED / UNASSIGNED";
+                }
                 window.saveData();
-                alert(`REPAIR: Fixed ${fixedCount} servers with missing or invalid team assignments.`);
+                alert(`SUCCESS: Found and recovered ${fixedCount} orphaned servers! They are now visible in the "RECOVERED" section at the bottom of the Team view.`);
                 window.refreshUI();
             } else {
-                alert(`REPAIR: No issues found among ${initialCount} servers.`);
+                alert(`No orphaned servers found among ${initialCount} total servers.`);
             }
         };
 
@@ -1519,7 +1452,7 @@
             const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
             const allIPs = [];
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 ips.forEach(ip => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     allIPs.push({ ip, trackId });
@@ -1584,90 +1517,58 @@
                         if (resp.ok) {
                             const data = await resp.json();
                             if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
-                                let listName = 'SIA';
-                                if(data.lists && data.lists.length > 0) {
-                                    listName = data.lists.map(l => l.name).join('+');
-                                }
-                                return { listed: true, zone: `Spamhaus (${listName})` };
+                                return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
                             }
                         }
                     } catch (e) { }
                 }
 
                 // 4. DoH Fallback (limited - many DNSBLs block public resolvers)
-                // 4. DoH Fallback (ZEN Spamhaus is critical)
                 const zones = [
-                    { name: 'Spamhaus ZEN', zone: 'zen.spamhaus.org' },
-                    { name: 'SpamCop', zone: 'bl.spamcop.net' },
                     { name: 'UCEPROTECT-1', zone: 'dnsbl-1.uceprotect.net' },
-                    { name: 'Barracuda', zone: 'b.barracudacentral.org' },
+                    { name: 'DroneRL', zone: 'dnsbl.dronebl.org' },
                     { name: 'SORBS', zone: 'dnsbl.sorbs.net' }
                 ];
                 const revIp = ip.split('.').reverse().join('.');
-                
-                // Check in parallel for this single IP
-                const dnsPromises = zones.map(async z => {
+                for (let z of zones) {
                     try {
                         const resp = await fetch(`https://dns.google/resolve?name=${revIp}.${z.zone}&type=A`);
                         const dns = await resp.json();
                         if (dns.Answer && dns.Answer.length > 0) {
                             const val = dns.Answer[0].data;
-                            // Spamhaus ZEN specific codes
-                            if (z.name === 'Spamhaus ZEN') {
-                                if (val === '127.0.0.2') return { listed: true, zone: 'Spamhaus SBL' };
-                                if (val === '127.0.0.3') return { listed: true, zone: 'Spamhaus CSS' };
-                                if (val.startsWith('127.0.0.')) return { listed: true, zone: 'Spamhaus ZEN' };
-                                return null; // Likely a block notice (127.255.255.252)
+                            if (val.startsWith('127.0.0.')) {
+                                return { listed: true, zone: z.name };
                             }
-                            return { listed: true, zone: z.name };
                         }
-                    } catch (e) {}
-                    return null;
-                });
-
-                const results = await Promise.all(dnsPromises);
-                const found = results.find(r => r && r.listed);
-                if(found) return found;
-
+                    } catch (e) { }
+                }
                 return { listed: false };
             }
 
-            // CHUNKED PARALLEL SCAN (5 at a time)
-            const CONCURRENCY = 5;
-            let completed = 0;
+            for(let i=0; i < allIPs.length; i++) {
+                const item = allIPs[i];
+                const perc = Math.round(((i + 1) / allIPs.length) * 100);
+                
+                statusText.textContent = `Checking ${item.ip}...`;
+                progressBar.style.width = `${perc}%`;
+                progressPerc.textContent = `${perc}%`;
 
-            const processChunk = async (chunk) => {
-                const promises = chunk.map(async item => {
-                    const now = new Date();
-                    const fullDateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+                // Run Multi-Source Check
+                const hetrixKey = window.settings.hetrixKey;
+                const check = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
+                let result = check.listed ? 'LISTED' : 'CLEAN';
 
-                    if(!window.trackingData[item.trackId]) {
-                        window.trackingData[item.trackId] = { notes:'' };
-                    }
-                    
-                    window.trackingData[item.trackId][today] = result;
-                    window.trackingData[item.trackId][fullDateStr] = result; // Save by exact date for history
-                    
-                    if(check.listed) {
-                        window.trackingData[item.trackId].notes = `Listed: ${check.zone}`;
-                        // Keep a record of the specific date's zone too
-                        window.trackingData[item.trackId][`${fullDateStr}_zone`] = check.zone;
-                    }
+                if(!window.trackingData[item.trackId]) {
+                    window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
+                }
+                
+                window.trackingData[item.trackId][today] = result;
+                if(check.listed) {
+                    window.trackingData[item.trackId].notes = `Listed: ${check.zone}`;
+                }
 
-                    completed++;
-                    const perc = Math.round((completed / allIPs.length) * 100);
-                    statusText.textContent = `Progress: ${completed}/${allIPs.length} (${item.ip})`;
-                    progressBar.style.width = `${perc}%`;
-                    progressPerc.textContent = `${perc}%`;
-                });
-                await Promise.all(promises);
                 window.renderTrackingTable();
-                window.saveData();
-            };
-
-            for (let i = 0; i < allIPs.length; i += CONCURRENCY) {
-                const chunk = allIPs.slice(i, i + CONCURRENCY);
-                await processChunk(chunk);
+                await new Promise(r => setTimeout(r, 150));
             }
 
             statusText.textContent = `Scan Complete! Total: ${allIPs.length} IPs checked.`;
@@ -1839,11 +1740,6 @@
                 const dateStr = now.toDateString(); 
                 
                 if(timeStr === "09:00" && window.lastAutoScanDate !== dateStr) {
-                    if(!window.settings.enableAutoScan) {
-                        console.log("SCHEDULED TASK: 09:00 AM reached but Auto-Scan is DISABLED in settings.");
-                        window.lastAutoScanDate = dateStr;
-                        return;
-                    }
                     window.lastAutoScanDate = dateStr;
                     console.log("SCHEDULED TASK: Starting automatic 09:00 AM scan...");
                     
@@ -1858,12 +1754,6 @@
                     })();
                 }
             }, 30000);
-        };
-
-        window.toggleAutoScanSchedule = function(enabled) {
-            window.settings.enableAutoScan = enabled;
-            window.saveData();
-            console.log(`Auto-Scan Schedule 09:00 AM: ${enabled ? 'ENABLED' : 'DISABLED'}`);
         };
 
         window.saveAdminProfile = function(e) {
@@ -3076,64 +2966,6 @@
             }
         };
 
-        window.activeTrackTab = 'current';
-        window.selectedHistoryDate = '';
-
-        window.switchTrackTab = function(tab, el) {
-            window.activeTrackTab = tab;
-            const btns = el.parentElement.querySelectorAll('.tab-btn');
-            btns.forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
-
-            const historySelector = document.getElementById('trackHistorySelector');
-            const blActions = document.querySelector('.bl-actions-row');
-            
-            if(tab === 'history') {
-                historySelector.style.display = 'flex';
-                blActions.style.display = 'none';
-                window.renderHistorySelector();
-            } else {
-                historySelector.style.display = 'none';
-                blActions.style.display = 'flex';
-                window.selectedHistoryDate = '';
-                window.renderTrackingTable();
-            }
-        };
-
-        window.renderHistorySelector = function() {
-            const container = document.getElementById('trackHistorySelector');
-            // Extract all dates that have recorded data
-            const dateSet = new Set();
-            Object.values(window.trackingData).forEach(trk => {
-                Object.keys(trk).forEach(k => {
-                    if(/^\d{4}-\d{2}-\d{2}$/.test(k)) dateSet.add(k);
-                });
-            });
-
-            const dates = Array.from(dateSet).sort().reverse(); // Newest first
-            if(!window.selectedHistoryDate && dates.length > 0) window.selectedHistoryDate = dates[0];
-
-            container.innerHTML = dates.map(d => {
-                const parts = d.split('-');
-                const display = `${parts[2]}/${parts[1]}`;
-                const year = parts[0];
-                const active = window.selectedHistoryDate === d ? 'active' : '';
-                return `
-                    <div class="history-date-card ${active}" onclick="window.selectHistoryDate('${d}')">
-                        <div class="year">${year}</div>
-                        <div class="date">${display}</div>
-                        <div class="status">RECORDED</div>
-                    </div>
-                `;
-            }).join('') || '<p style="color:var(--text-secondary); font-size:0.8rem; padding:10px;">No historical data yet. Run a scan to record data.</p>';
-        };
-
-        window.selectHistoryDate = function(date) {
-            window.selectedHistoryDate = date;
-            window.renderHistorySelector();
-            window.renderTrackingTable();
-        };
-
         window.renderTrackingTable = function() {
             const tbody = document.getElementById('trackingTableBody');
             if(!tbody) return;
@@ -3153,68 +2985,34 @@
             let html = '';
             
             teamServers.forEach(s => {
-                const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                 if (ips.length === 0) ips.push('No IP');
                 
                 ips.forEach((ip, idx) => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     
-                    let statusForDisplay = '';
-                    let zoneForDisplay = '';
+                    const todayVal = (trk[today] || '').toUpperCase().trim();
+                    if(todayVal === 'CLEAN') cleanCount++;
+                    if(todayVal === 'LISTED') listedCount++;
 
-                    if (window.activeTrackTab === 'history' && window.selectedHistoryDate) {
-                        statusForDisplay = (trk[window.selectedHistoryDate] || '').toUpperCase().trim();
-                        zoneForDisplay = trk[`${window.selectedHistoryDate}_zone`] || '';
-                    } else {
-                        statusForDisplay = (trk[today] || '').toUpperCase().trim();
-                    }
-
-                    if(statusForDisplay === 'CLEAN') cleanCount++;
-                    if(statusForDisplay === 'LISTED') listedCount++;
-
-                    let dayCells = '';
-                    if (window.activeTrackTab === 'history') {
-                        // In history, show only the status for that day
-                        let color = 'var(--text-secondary)';
-                        let bg = 'rgba(255,255,255,0.02)';
-                        if(statusForDisplay === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
-                        if(statusForDisplay === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
+                    let dayCells = days.map(d => {
+                        const val = (trk[d] || '').toUpperCase().trim();
+                        let color = 'white';
+                        let bg = 'rgba(0,0,0,0.2)';
+                        if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
+                        if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
                         
-                        dayCells = `<td colspan="7" style="padding:4px; text-align:center;">
-                            <span style="background:${bg}; color:${color}; padding:6px 15px; border-radius:6px; font-size:0.75rem; font-weight:800; border:1px solid rgba(255,255,255,0.05); display:inline-block; min-width:100px;">
-                                ${statusForDisplay || 'NO DATA'} ${zoneForDisplay ? `(${zoneForDisplay})` : ''}
-                            </span>
-                        </td>`;
-                    } else {
-                        dayCells = days.map(d => {
-                            const val = (trk[d] || '').toUpperCase().trim();
-                            let color = 'white';
-                            let bg = 'rgba(0,0,0,0.2)';
-                            if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; }
-                            if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; }
-                            
-                            return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:${bg}; border:1px solid transparent; color:${color}; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
-                        }).join('');
-                    }
+                        return `<td style="padding:2px;"><input type="text" value="${trk[d] || ''}" oninput="window.updateTrackCell('${trackId}', '${d}', this.value)" style="width:100%; min-width:50px; background:${bg}; border:1px solid transparent; color:${color}; padding:8px 4px; border-radius:4px; font-size:0.75rem; outline:none; text-align:center; transition:0.2s; font-weight:bold;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>`;
+                    }).join('');
                     
-                    const isListedForTr = statusForDisplay === 'LISTED';
-                    const trBg = isListedForTr ? 'rgba(239, 68, 68, 0.08)' : 'transparent';
-                    const isLastIp = idx === ips.length - 1;
-                    const rowBorder = isLastIp ? '2px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)';
-                    
-                    html += `<tr style="border-bottom:${rowBorder}; background:${trBg};">
-                        ${idx === 0 ? `<td rowspan="${ips.length}" style="font-weight:700; font-size:0.85rem; padding: 15px 10px; color:var(--accent-color); border-right:1px solid rgba(255,255,255,0.05); text-align:center; vertical-align:middle;">${s.name}</td>` : ''}
-                        <td style="font-family:monospace; color:white; font-size:0.85rem; padding: 12px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;">
-                            <a href="https://check.spamhaus.org/query/ip/${ip}" target="_blank" style="color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-                                ${ip} <i data-lucide="external-link" style="width:12px; height:12px; opacity:0.4;"></i>
-                            </a>
-                        </td>
-                        <td style="padding: 8px 10px; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.05); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
+                    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="font-weight:600; font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${idx === 0 ? s.name : '<span style="color:var(--text-secondary); margin-left:1rem;">↳</span>'}</td>
+                        <td style="font-family:monospace; color:var(--accent-color); font-size:0.8rem; padding: 8px 10px; white-space:nowrap;">${ip}</td>
+                        <td style="padding: 8px 10px; white-space:nowrap;"><span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:0.7rem;">${s.owner || '-'}</span></td>
                         ${dayCells}
-                        <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" ${window.activeTrackTab === 'history' ? 'readonly' : ''} oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:120px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px; border-radius:4px; font-size:0.75rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
+                        <td style="padding:2px;"><input type="text" value="${trk.notes || ''}" oninput="window.updateTrackCell('${trackId}', 'notes', this.value)" placeholder="..." style="width:100%; min-width:120px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:8px; border-radius:4px; font-size:0.75rem; outline:none; transition:0.2s;" onfocus="this.style.borderColor='var(--accent-color)'" onblur="this.style.borderColor='transparent'"></td>
                     </tr>`;
-                });
                 });
             });
             
@@ -3227,26 +3025,16 @@
             if(distContainer && distInner) {
                 const types = {};
                 teamServers.forEach(s => {
-                    const ips = (s.ip || '').split(/[,\s\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                    const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
                     ips.forEach(ip => {
                         const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                         const trk = window.trackingData[trackId] || {};
-                        const todayVal = (window.activeTrackTab === 'history' && window.selectedHistoryDate) 
-                                           ? (trk[window.selectedHistoryDate] || '').toUpperCase().trim() 
-                                           : (trk[today] || '').toUpperCase().trim();
-                                           
-                        if(todayVal === 'LISTED' && (trk.notes || trk[`${window.selectedHistoryDate}_zone`])) {
-                            // Extract type from notes or from stored zone record
-                            let zoneInfo = trk[`${window.selectedHistoryDate}_zone`] || '';
-                            if(!zoneInfo && trk.notes) {
-                                const match = trk.notes.match(/Listed:\s*([^(\n]+)/i);
-                                if(match) zoneInfo = match[1].trim();
-                            }
-                            
-                            if(zoneInfo) {
-                                let type = zoneInfo.trim();
-                                if(type.toLowerCase().includes('spamhaus')) type = 'Spamhaus';
-                                if(type.toLowerCase().includes('hetrix')) type = 'Hetrix';
+                        const todayVal = (trk[today] || '').toUpperCase().trim();
+                        if(todayVal === 'LISTED' && trk.notes) {
+                            // Extract type from "Listed: Spamhaus (CSS)"
+                            const match = trk.notes.match(/Listed:\s*(.*)/i);
+                            if(match && match[1]) {
+                                const type = match[1].trim();
                                 types[type] = (types[type] || 0) + 1;
                             }
                         }
