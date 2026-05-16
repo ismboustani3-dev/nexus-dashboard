@@ -1241,16 +1241,18 @@
                 
                 // Set up real-time listener
                 db.ref('nexus').on('value', (snapshot) => {
-                    const rData = snapshot.val() || {};
-                    window.projects = rData.projects || [];
-                    window.servers = rData.servers || [];
-                    window.teamNames = rData.teams || { team1: 'Team 1', team2: 'Team 2' };
-                    window.settings = rData.settings || { adminName: 'Admin', adminPass: 'admin', users: [] };
-                    // History node ignored
-                    window.rdnsData = rData.rdnsData || {};
-                    window.remarques = rData.remarques || []; // Changed to array
+                    const rData = snapshot.val();
+                    if(!rData) return; // ⛔ NEVER OVERWRITE WITH EMPTY STATE FROM CLOUD
                     
-                    if(window.activeNoteId) {
+                    if(rData.projects) window.projects = rData.projects;
+                    if(rData.servers) window.servers = rData.servers;
+                    if(rData.teams) window.teamNames = rData.teams;
+                    if(rData.settings) window.settings = rData.settings;
+                    if(rData.rdnsData) window.rdnsData = rData.rdnsData;
+                    if(rData.remarques) window.remarques = rData.remarques;
+                    
+                    if(window._dataLoaded) window.refreshUI();
+                });
                         const note = window.remarques.find(n => n.id === window.activeNoteId);
                         if(note) {
                             const titleEl = document.getElementById('activeNoteTitle');
@@ -1279,32 +1281,43 @@
         };
 
         window.fixOrphanedServers = function() {
+            const localBackup = localStorage.getItem('nexus_backup');
+            
+            if (window.servers.length === 0 && localBackup) {
+                const data = JSON.parse(localBackup);
+                if (confirm(`CRITICAL RECOVERY: Found local backup with ${data.servers?.length || 0} servers. Force restore everything?`)) {
+                    window.projects = data.projects || [];
+                    window.servers = data.servers || [];
+                    window.teamNames = data.teams || window.teamNames;
+                    window.settings = data.settings || window.settings;
+                    window.trackingData = data.tracking || {};
+                    window.saveData();
+                    window.refreshUI();
+                    alert("DATABASE RESTORED SUCCESSFULLY FROM LOCAL BACKUP!");
+                    return;
+                }
+            }
+
             let fixedCount = 0;
             let initialCount = window.servers.length;
             
-            // 1. Identify valid team IDs
             const validTeamIds = Object.keys(window.teamNames).map(k => k.replace('team',''));
             
-            // 2. Scan and repair
             window.servers = window.servers.map(s => {
                 const teamId = (s.team || '').toString();
                 if (!teamId || !validTeamIds.includes(teamId)) {
                     fixedCount++;
-                    return { ...s, team: 'orphaned' };
+                    return { ...s, team: '1' }; // Default to Team 1 instead of 'orphaned'
                 }
                 return s;
             });
             
             if (fixedCount > 0) {
-                // Ensure 'orphaned' team name exists
-                if (!window.teamNames.teamorphaned) {
-                    window.teamNames.teamorphaned = "⚠️ RECOVERED / UNASSIGNED";
-                }
                 window.saveData();
-                alert(`SUCCESS: Found and recovered ${fixedCount} orphaned servers! They are now visible in the "RECOVERED" section at the bottom of the Team view.`);
+                alert(`REPAIR: Fixed ${fixedCount} servers with missing or invalid team assignments.`);
                 window.refreshUI();
             } else {
-                alert(`No orphaned servers found among ${initialCount} total servers.`);
+                alert(`REPAIR: No issues found among ${initialCount} servers.`);
             }
         };
 
