@@ -1560,12 +1560,17 @@
                     try {
                         const results = await Promise.all(dnsProviders.map(async prov => {
                             try {
-                                const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(3000) });
+                                const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(2000) });
                                 if (resp.ok) {
                                     const dns = await resp.json();
                                     if (dns.Answer && dns.Answer.length > 0) {
                                         const val = dns.Answer[0].data;
-                                        if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) return { listed: true, zone: `${z.name} (${prov.name})` };
+                                        if (val === '127.0.0.255') return null;
+                                        if (val.startsWith('127.0.0.')) {
+                                            let zoneName = z.name;
+                                            if (z.host.includes('barracuda') && val === '127.0.0.2') zoneName = 'BARRACUDA';
+                                            return { listed: true, zone: `${zoneName} (${prov.name})` };
+                                        }
                                     }
                                 }
                             } catch (e) { }
