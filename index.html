@@ -677,6 +677,7 @@
             <div class="bl-actions-row" style="margin-bottom: 1rem; display:flex; gap:10px;">
                 <button class="bl-btn bl-btn-primary" onclick="window.saveData()"><i data-lucide="save"></i> Save Changes</button>
                 <button class="bl-btn bl-btn-success" onclick="window.exportTrackingCSV()"><i data-lucide="download"></i> Export CSV</button>
+                <button class="bl-btn" onclick="window.runSystemCheck()" style="background:rgba(255,255,255,0.1); color:white; border:none; font-weight:700;"><i data-lucide="activity"></i> System Check</button>
                 <button id="autoScanBtn" class="bl-btn" onclick="window.runAutoScan()" style="background:var(--accent-color); color:black; border:none; font-weight:700;"><i data-lucide="zap"></i> Run Auto Scan</button>
             </div>
 
@@ -1449,6 +1450,33 @@
                 alert(`Failed to add servers. ${errors} line(s) had an incorrect format. Make sure you use 9 parts separated by semicolons.`);
             }
         };
+        window.runSystemCheck = async function() {
+            let report = "🔍 SYSTEM DIAGNOSTIC:\n\n";
+            
+            // Test Proxy
+            try {
+                const start = Date.now();
+                const resp = await fetch('http://localhost:8082/check?ip=1.1.1.1', { mode: 'cors' });
+                report += `✅ LOCAL PROXY: OK (${Date.now() - start}ms)\n`;
+            } catch (e) {
+                report += `❌ LOCAL PROXY: NOT FOUND (Run proxy.js with Node.js)\n`;
+            }
+
+            // Test Google DoH
+            try {
+                const resp = await fetch('https://dns.google/resolve?name=google.com&type=A');
+                report += resp.ok ? "✅ GOOGLE DNS: OK\n" : "❌ GOOGLE DNS: FAILED\n";
+            } catch (e) { report += "❌ GOOGLE DNS: BLOCKED/OFFLINE\n"; }
+
+            // Test Quad9
+            try {
+                const resp = await fetch('https://dns.quad9.net/dns-query?name=google.com&type=A', { headers: {'Accept': 'application/dns-json'} });
+                report += resp.ok ? "✅ QUAD9 DNS: OK\n" : "❌ QUAD9 DNS: FAILED\n";
+            } catch (e) { report += "❌ QUAD9 DNS: BLOCKED/OFFLINE\n"; }
+
+            alert(report);
+        };
+
         window.runAutoScan = async function() {
             const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
             const allIPs = [];
