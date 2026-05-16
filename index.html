@@ -1538,17 +1538,16 @@
                 const dnsProviders = [
                     { name: 'Quad9', url: (z) => `https://dns.quad9.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
-                    { name: 'Mullvad', url: (z) => `https://doh.mullvad.net/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
-                    { name: 'LibreDNS', url: (z) => `https://doh.libredns.gr/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'OpenDNS', url: (z) => `https://doh.opendns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
-                    { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` }
+                    { name: 'CleanBrowsing', url: (z) => `https://doh.cleanbrowsing.org/doh/family-filter?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
+                    { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` }
                 ];
                 
                 const zones = [
-                    { name: 'CSS', host: 'css.spamhaus.org', priority: 1 },
-                    { name: 'SBL', host: 'sbl.spamhaus.org', priority: 2 },
-                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', priority: 3 },
+                    { name: 'CSS', host: 'css.spamhaus.org', priority: 1, code: '127.0.0.3' },
+                    { name: 'SBL', host: 'sbl.spamhaus.org', priority: 2, code: '127.0.0.2' },
+                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', priority: 3, code: '127.0.0.2' },
                     { name: 'ZEN', host: 'zen.spamhaus.org', priority: 4 }
                 ];
 
@@ -1564,7 +1563,13 @@
                                         if (dns.Answer && dns.Answer.length > 0) {
                                             const val = dns.Answer[0].data;
                                             if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
-                                                return { listed: true, zone: z.name, priority: z.priority, prov: prov.name };
+                                                let detectedZone = z.name;
+                                                if (z.name === 'ZEN') {
+                                                    if (val === '127.0.0.3') detectedZone = 'CSS';
+                                                    else if (val === '127.0.0.2') detectedZone = 'SBL';
+                                                    else if (val === '127.0.0.4' || val === '127.0.0.9') detectedZone = 'SBL';
+                                                }
+                                                return { listed: true, zone: detectedZone, priority: z.priority, prov: prov.name };
                                             }
                                         }
                                     }
