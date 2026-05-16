@@ -1477,22 +1477,22 @@
             const spamhausToken = window.settings.spamhausToken;
             
             async function checkIpStatus(ip, sToken, hKey) {
-                const zenZones = [
-                    { name: 'Spamhaus (SBL)', code: '127.0.0.2' },
-                    { name: 'Spamhaus (CSS)', code: '127.0.0.3' },
-                    { name: 'Spamhaus (XBL/PBL)', code: '127.0.0.' }
-                ];
-                const revIp = ip.split('.').reverse().join('.');
-                try {
-                    const resp = await fetch(`https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A`);
-                    const dns = await resp.json();
-                    if (dns.Answer && dns.Answer.length > 0) {
-                        const val = dns.Answer[0].data;
-                        const match = zenZones.find(z => z.code === val || (z.code.endsWith('.') && val.startsWith(z.code)));
-                        return { listed: true, zone: match ? match.name : 'Spamhaus ZEN' };
-                    }
-                } catch (e) { }
+                // 1. Spamhaus SIA API (Most Reliable if token exists)
+                if(sToken) {
+                    try {
+                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
+                            headers: { 'Authorization': `Bearer ${sToken}` }
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if(data && data.lists && data.lists.length > 0) {
+                                return { listed: true, zone: `Spamhaus (${data.lists[0].name})` };
+                            }
+                        }
+                    } catch (e) { }
+                }
 
+                // 2. HetrixTools API
                 if(hKey) {
                     try {
                         const resp = await fetch(`https://api.hetrixtools.com/v2/${hKey}/blacklist-check/ipv4/${ip}/`);
@@ -1505,19 +1505,30 @@
                     } catch (e) { }
                 }
 
-                if(sToken) {
-                    try {
-                        const resp = await fetch(`https://sis.spamhaus.com/api/v1/ip/reputation/${ip}`, {
-                            headers: { 'Authorization': `Bearer ${sToken}` }
-                        });
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            if(data && (data.reputation_score > 50 || (data.lists && data.lists.length > 0))) {
-                                return { listed: true, zone: `Spamhaus (${data.lists[0]?.name || 'SIA'})` };
-                            }
-                        }
-                    } catch (e) { }
-                }
+                // 3. DNSBL via DoH (Fallback - Note: Spamhaus blocks public resolvers like Google)
+                const zenZones = [
+                    { name: 'Spamhaus (SBL)', code: '127.0.0.2' },
+                    { name: 'Spamhaus (CSS)', code: '127.0.0.3' },
+                    { name: 'Spamhaus (XBL)', code: '127.0.0.4' },
+                    { name: 'Spamhaus (PBL)', code: '127.0.0.10' }
+                ];
+                const revIp = ip.split('.').reverse().join('.');
+                try {
+                    const resp = await fetch(`https://dns.google/resolve?name=${revIp}.zen.spamhaus.org&type=A`);
+                    const dns = await resp.json();
+                    if (dns.Answer && dns.Answer.length > 0) {
+                        const val = dns.Answer[0].data;
+                        
+                        // ⛔ IMPORTANT: 127.0.0.255 means "Service Refused" (Spamhaus blocks Google DNS)
+                        if (val === '127.0.0.255') return { listed: false };
+                        
+                        const match = zenZones.find(z => z.code === val);
+                        if (match) return { listed: true, zone: match.name };
+                        
+                        // If it's 127.0.0.x but not 255, it's likely a listing
+                        if (val.startsWith('127.0.0.')) return { listed: true, zone: 'Spamhaus (ZEN)' };
+                    }
+                } catch (e) { }
 
                 const otherZones = [
                     { name: 'SpamCop', zone: 'bl.spamcop.net' },
