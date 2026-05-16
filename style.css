@@ -73,7 +73,7 @@ body {
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: 12px;
-    font-size: 1rem;
+    font-size: 1.1rem;
     transition: var(--transition);
 }
 
@@ -314,7 +314,7 @@ header {
 .server-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .server-table th {
