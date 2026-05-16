@@ -1540,14 +1540,14 @@
                     { name: 'AdGuard', url: (z) => `https://dns.adguard-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'OpenDNS', url: (z) => `https://doh.opendns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
                     { name: 'CleanBrowsing', url: (z) => `https://doh.cleanbrowsing.org/doh/family-filter?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} },
-                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A` },
-                    { name: 'NextDNS', url: (z) => `https://dns.nextdns.io/resolve?name=${revIp}.${z}&type=A` }
+                    { name: 'Google', url: (z) => `https://dns.google/resolve?name=${revIp}.${z}&type=A&edns_client_subnet=0.0.0.0/0` },
+                    { name: 'Cloudflare', url: (z) => `https://cloudflare-dns.com/dns-query?name=${revIp}.${z}&type=A`, h: {'Accept': 'application/dns-json'} }
                 ];
                 
                 const zones = [
-                    { name: 'CSS', host: 'css.spamhaus.org', priority: 1, code: '127.0.0.3' },
-                    { name: 'SBL', host: 'sbl.spamhaus.org', priority: 2, code: '127.0.0.2' },
-                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', priority: 3, code: '127.0.0.2' },
+                    { name: 'CSS', host: 'css.spamhaus.org', priority: 1 },
+                    { name: 'SBL', host: 'sbl.spamhaus.org', priority: 2 },
+                    { name: 'BARRACUDA', host: 'b.barracudacentral.org', priority: 3 },
                     { name: 'ZEN', host: 'zen.spamhaus.org', priority: 4 }
                 ];
 
@@ -1557,19 +1557,18 @@
                         dnsProviders.forEach(prov => {
                             allQueries.push((async () => {
                                 try {
-                                    const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(2000) });
+                                    const resp = await fetch(prov.url(z.host), { headers: prov.h || {}, signal: AbortSignal.timeout(3000) });
                                     if (resp.ok) {
                                         const dns = await resp.json();
                                         if (dns.Answer && dns.Answer.length > 0) {
                                             const val = dns.Answer[0].data;
                                             if (val !== '127.0.0.255' && val.startsWith('127.0.0.')) {
-                                                let detectedZone = z.name;
-                                                if (z.name === 'ZEN') {
-                                                    if (val === '127.0.0.3') detectedZone = 'CSS';
-                                                    else if (val === '127.0.0.2') detectedZone = 'SBL';
-                                                    else if (val === '127.0.0.4' || val === '127.0.0.9') detectedZone = 'SBL';
+                                                let dZone = z.name;
+                                                if(z.name === 'ZEN') {
+                                                    if(val === '127.0.0.3') dZone = 'CSS';
+                                                    else if(val === '127.0.0.2' || val === '127.0.0.4' || val === '127.0.0.9') dZone = 'SBL';
                                                 }
-                                                return { listed: true, zone: detectedZone, priority: z.priority, prov: prov.name };
+                                                return { listed: true, zone: dZone, priority: z.priority, prov: prov.name };
                                             }
                                         }
                                     }
@@ -1581,15 +1580,12 @@
 
                     const results = await Promise.all(allQueries);
                     const validResults = results.filter(r => r && r.listed).sort((a, b) => a.priority - b.priority);
-                    
-                    if (validResults.length > 0) {
-                        return { listed: true, zone: `${validResults[0].zone} (${validResults[0].prov})` };
-                    }
+                    if (validResults.length > 0) return { listed: true, zone: `${validResults[0].zone} (${validResults[0].prov})` };
                 } catch (e) { }
                 return { listed: false };
             }
 
-            // High Performance Parallel Scanning (Batch size 5)
+            // High Performance Parallel Scanning (Batch size 5) with Anti-Block Delay
             const batchSize = 5;
             for (let i = 0; i < allIPs.length; i += batchSize) {
                 const batch = allIPs.slice(i, i + batchSize);
@@ -1597,21 +1593,19 @@
                 
                 await Promise.all(batch.map(async (item) => {
                     const result = await checkIpStatus(item.ip, spamhausToken, hetrixKey);
-                    if(!window.trackingData[item.trackId]) {
-                        window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
-                    }
+                    if(!window.trackingData[item.trackId]) window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     
                     if(result.listed) {
                         window.trackingData[item.trackId][today] = 'LISTED';
                         window.trackingData[item.trackId].notes = `Listed: ${result.zone} (${new Date().toLocaleDateString()})`;
-                    } else if (result.error) {
-                        window.trackingData[item.trackId][today] = 'ERROR';
-                        window.trackingData[item.trackId].notes = `Scan Error: ${result.error}`;
                     } else {
                         window.trackingData[item.trackId][today] = 'CLEAN';
                         window.trackingData[item.trackId].notes = '';
                     }
                 }));
+
+                // Anti-Block Delay (500ms)
+                if (i + batchSize < allIPs.length) await new Promise(r => setTimeout(r, 500));
 
                 const perc = Math.min(100, Math.round(((i + batchSize) / allIPs.length) * 100));
                 progressBar.style.width = perc + '%';
