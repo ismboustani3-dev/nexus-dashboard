@@ -3183,9 +3183,14 @@
                         const perc = Math.round((count / listedCount) * 100);
                         return `
                             <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding:10px; border-radius:8px;">
-                                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
-                                    <span style="color:var(--text-secondary); font-weight:600;">${name}</span>
-                                    <span style="color:#ef4444; font-weight:800;">${count}</span>
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; margin-bottom:5px;">
+                                    <span style="color:var(--text-secondary); font-weight:600; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${name}">${name}</span>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-left:10px;">
+                                        <span style="color:#ef4444; font-weight:800;">${count}</span>
+                                        <button onclick="window.copyIpsByType('${name.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.3); width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Copy IPs">
+                                            <i data-lucide="copy" size="10"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div style="height:4px; background:rgba(0,0,0,0.3); border-radius:2px; overflow:hidden;">
                                     <div style="height:100%; width:${perc}%; background:#ef4444; border-radius:2px;"></div>
@@ -3221,6 +3226,48 @@
             const filterCount = document.getElementById('bulkIpFilterInput').value.split(/\r?\n/).filter(x => x.trim()).length;
             if(filterCount > 0) {
                 console.log(`Bulk filter applied: ${filterCount} IPs`);
+            }
+        };
+
+        window.copyIpsByType = function(type) {
+            const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
+            const historyDateInput = document.getElementById('historyDateSelector');
+            const historyDate = historyDateInput ? historyDateInput.value : '';
+            const isHistoryMode = !!historyDate;
+            const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase();
+            const ipsToCopy = [];
+            
+            teamServers.forEach(s => {
+                const ips = (s.ip || '').split(/[,\n]+/).map(ip => ip.trim()).filter(ip => ip);
+                ips.forEach(ip => {
+                    const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
+                    const trk = window.trackingData[trackId] || {};
+                    let isListed = false;
+                    let notes = '';
+
+                    if (isHistoryMode) {
+                        const hist = trk.history && trk.history[historyDate] ? trk.history[historyDate] : null;
+                        isListed = hist && (hist.status || '').toUpperCase().trim() === 'LISTED';
+                        notes = hist ? (hist.notes || '') : '';
+                    } else {
+                        isListed = (trk[today] || '').toUpperCase().trim() === 'LISTED';
+                        notes = trk.notes || '';
+                    }
+
+                    if(isListed && notes.includes(type)) {
+                        ipsToCopy.push(ip);
+                    }
+                });
+            });
+            
+            if(ipsToCopy.length > 0) {
+                navigator.clipboard.writeText(ipsToCopy.join('\n')).then(() => {
+                    alert(`Copied ${ipsToCopy.length} IPs for ${type}!`);
+                }).catch(err => {
+                    alert('Failed to copy: ' + err);
+                });
+            } else {
+                alert(`No IPs found for ${type}`);
             }
         };
 
