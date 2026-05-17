@@ -620,9 +620,9 @@
                     <h2>IP Blacklist</h2>
                     <p>Track the daily status of your IPs across teams.</p>
                 </div>
-                <div id="schedulerStatus" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px;">
-                    <div style="width:8px; height:8px; background:#00f2fe; border-radius:50%; animation: pulse 2s infinite;"></div>
-                    <span style="font-size:0.7rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
+                <div id="schedulerStatus" onclick="window.toggleAutoScan()" style="background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); padding:8px 15px; border-radius:30px; display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; transition: all 0.3s ease;" title="Click to enable/disable daily 09:00 AM Auto-Scan">
+                    <div id="schedulerPulse" style="width:8px; height:8px; background:#00f2fe; border-radius:50%; animation: pulse 2s infinite;"></div>
+                    <span id="schedulerText" style="font-size:0.7rem; color:var(--accent-color); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Auto-Scan Scheduled: 09:00 AM</span>
                 </div>
                 <style>
                     @keyframes pulse { 0% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.4; transform: scale(1); } }
@@ -1823,6 +1823,45 @@
             }
         };
         
+        window.updateSchedulerUI = function() {
+            const statusEl = document.getElementById('schedulerStatus');
+            const pulseEl = document.getElementById('schedulerPulse');
+            const textEl = document.getElementById('schedulerText');
+            if(!statusEl || !pulseEl || !textEl) return;
+            
+            const isEnabled = window.settings && window.settings.autoScanEnabled !== false;
+            
+            if (isEnabled) {
+                statusEl.style.background = 'rgba(0,242,254,0.1)';
+                statusEl.style.borderColor = 'rgba(0,242,254,0.3)';
+                pulseEl.style.background = '#00f2fe';
+                pulseEl.style.animation = 'pulse 2s infinite';
+                textEl.style.color = 'var(--accent-color)';
+                textEl.textContent = 'Auto-Scan Scheduled: 09:00 AM';
+            } else {
+                statusEl.style.background = 'rgba(156,163,175,0.08)';
+                statusEl.style.borderColor = 'rgba(156,163,175,0.2)';
+                pulseEl.style.background = '#9ca3af';
+                pulseEl.style.animation = 'none';
+                textEl.style.color = '#9ca3af';
+                textEl.textContent = 'Auto-Scan: DISABLED';
+            }
+        };
+
+        window.toggleAutoScan = function() {
+            if(!window.settings) window.settings = {};
+            const current = window.settings.autoScanEnabled !== false;
+            window.settings.autoScanEnabled = !current;
+            window.saveData();
+            window.updateSchedulerUI();
+            
+            if (window.settings.autoScanEnabled) {
+                alert('⏰ Auto-Scan enabled (scheduled daily at 09:00 AM).');
+            } else {
+                alert('📴 Auto-Scan disabled.');
+            }
+        };
+
         window.lastAutoScanDate = "";
         window.startBackgroundScheduler = function() {
             console.log("Background Scheduler Started. Monitoring for 09:00 AM...");
@@ -1834,6 +1873,12 @@
                 const dateStr = now.toDateString(); 
                 
                 if(timeStr === "09:00" && window.lastAutoScanDate !== dateStr) {
+                    // Check if Auto-Scan is enabled before running
+                    if (window.settings && window.settings.autoScanEnabled === false) {
+                        console.log("SCHEDULED TASK: Skipped 09:00 AM auto scan because it is disabled.");
+                        return;
+                    }
+
                     window.lastAutoScanDate = dateStr;
                     console.log("SCHEDULED TASK: Starting automatic 09:00 AM scan...");
                     
@@ -2061,6 +2106,7 @@
         };
 
         window.refreshUI = function() {
+            if(window.updateSchedulerUI) window.updateSchedulerUI();
             document.getElementById('headerName').textContent = window.currentUser.name || window.currentUser.username;
             
             // Dashboard Stats
