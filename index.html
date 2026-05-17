@@ -685,15 +685,19 @@
                 <div style="height:38px; width:1px; background:rgba(255,255,255,0.1); margin:0 5px;"></div>
                 <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
                     <div style="padding:0 10px; color:var(--text-secondary);"><i data-lucide="calendar" size="16"></i></div>
-                    <input type="text" id="historyDateSelector" placeholder="DD/MM/YYYY" style="background:transparent; border:none; color:var(--accent-color); padding:8px 10px 8px 0; outline:none; font-family:'Inter'; font-weight:700; height:38px; cursor:pointer; width:120px;" title="Select a past date to view scan history">
+                    <input type="text" id="historyDateSelector" placeholder="DD/MM/YYYY" style="background:transparent; border:none; color:var(--accent-color); padding:8px 10px 8px 0; outline:none; font-family:'Inter'; font-weight:700; height:38px; cursor:pointer; width:200px;" title="Select a past date or range to view scan history">
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
                             flatpickr("#historyDateSelector", {
+                                mode: "range",
                                 dateFormat: "Y-m-d",
                                 altInput: true,
                                 altFormat: "d/m/Y",
-                                onChange: function() {
-                                    if(window.renderTrackingTable) window.renderTrackingTable();
+                                onChange: function(selectedDates) {
+                                    // Render only when a single date is selected OR when a full range (2 dates) is selected
+                                    if(selectedDates.length === 1 || selectedDates.length === 2) {
+                                        if(window.renderTrackingTable) window.renderTrackingTable();
+                                    }
                                 }
                             });
                         });
@@ -3066,9 +3070,31 @@
                 return;
             }
             
+            // --- Date Range Detection ---
             const historyDateInput = document.getElementById('historyDateSelector');
-            const historyDate = historyDateInput ? historyDateInput.value : '';
-            const isHistoryMode = !!historyDate;
+            const rawValue = historyDateInput ? historyDateInput._flatpickr ? historyDateInput._flatpickr.selectedDates : [] : [];
+            
+            let rangeDates = []; // Array of "YYYY-MM-DD" strings
+            if (rawValue.length === 1) {
+                // Single date mode
+                const d = rawValue[0];
+                rangeDates = [d.toISOString().split('T')[0]];
+            } else if (rawValue.length === 2) {
+                // Range mode — generate every date in range
+                let cur = new Date(rawValue[0]);
+                const end = new Date(rawValue[1]);
+                while (cur <= end) {
+                    rangeDates.push(cur.toISOString().split('T')[0]);
+                    cur.setDate(cur.getDate() + 1);
+                }
+            }
+            const isHistoryMode = rangeDates.length > 0;
+            const isRangeMode = rangeDates.length > 1;
+
+            const formatDisplayDate = (isoDate) => {
+                const parts = isoDate.split('-');
+                return `${parts[2]}/${parts[1]}`;
+            };
 
             const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
             const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase();
@@ -3076,15 +3102,16 @@
             let listedCount = 0;
             let html = '';
 
+            // --- Update Table Headers ---
             const theadRow = document.getElementById('trackingTableHeaderRow');
             if (theadRow) {
                 if (isHistoryMode) {
+                    const dateCols = rangeDates.map(d => `<th style="text-align:center; color:var(--accent-color); font-size:0.7rem; min-width:70px;">${formatDisplayDate(d)}</th>`).join('');
                     theadRow.innerHTML = `
                         <th style="min-width: 120px;">SERVER</th>
                         <th style="min-width: 140px;">IP</th>
                         <th>OWNER</th>
-                        <th style="color:var(--accent-color);">STATUS ON ${historyDate}</th>
-                        <th style="color:var(--accent-color);">NOTES / BLACKLIST TYPE</th>
+                        ${dateCols}
                     `;
                 } else {
                     theadRow.innerHTML = `
@@ -3115,23 +3142,29 @@
                     let isListed = false;
 
                     if (isHistoryMode) {
-                        const hist = trk.history && trk.history[historyDate] ? trk.history[historyDate] : null;
-                        const val = hist ? (hist.status || '').toUpperCase().trim() : '';
-                        const notes = hist ? (hist.notes || '') : '';
-                        
-                        let color = 'white';
-                        let bg = 'rgba(0,0,0,0.2)';
-                        if(val === 'CLEAN') { color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; cleanCount++; }
-                        else if(val === 'LISTED') { color = '#ef4444'; bg = 'rgba(239,68,68,0.1)'; listedCount++; isListed = true; }
-                        else if(val) { color = 'white'; bg = 'rgba(255,255,255,0.1)'; }
+                        // Generate one cell per date in the range
+                        dayCells = rangeDates.map(dateStr => {
+                            const hist = trk.history && trk.history[dateStr] ? trk.history[dateStr] : null;
+                            const val = hist ? (hist.status || '').toUpperCase().trim() : '';
+                            const notes = hist ? (hist.notes || '') : '';
+                            
+                            let color = 'rgba(255,255,255,0.2)';
+                            let bg = 'rgba(255,255,255,0.03)';
+                            let textColor = 'rgba(255,255,255,0.3)';
+                            let label = '—';
 
-                        dayCells = `
-                        <td style="padding:2px; text-align:center;">
-                            <span style="display:inline-block; width:100%; min-width:80px; background:${bg}; color:${color}; padding:10px 4px; border-radius:6px; font-size:0.9rem; font-weight:bold;">${val || 'NO DATA'}</span>
-                        </td>
-                        <td style="padding:2px;">
-                            <input type="text" value="${notes}" readonly style="width:100%; min-width:150px; background:rgba(0,0,0,0.2); border:1px solid transparent; color:white; padding:10px; border-radius:6px; font-size:0.9rem; outline:none; opacity:0.7;">
-                        </td>`;
+                            if(val === 'CLEAN') {
+                                color = 'rgba(16,185,129,0.3)'; bg = 'rgba(16,185,129,0.1)'; textColor = '#10b981'; label = '✓'; cleanCount++;
+                            } else if(val === 'LISTED') {
+                                color = 'rgba(239,68,68,0.4)'; bg = 'rgba(239,68,68,0.12)'; textColor = '#ef4444'; label = '✗'; listedCount++; isListed = true;
+                            }
+
+                            const tooltip = val === 'LISTED' && notes ? `title="${notes}"` : '';
+
+                            return `<td style="padding:2px; text-align:center;">
+                                <span ${tooltip} style="display:inline-block; width:100%; min-width:50px; background:${bg}; color:${textColor}; border:1px solid ${color}; padding:8px 4px; border-radius:6px; font-size:1rem; font-weight:bold; cursor:default;">${label}</span>
+                            </td>`;
+                        }).join('');
                     } else {
                         const todayVal = (trk[today] || '').toUpperCase().trim();
                         if(todayVal === 'CLEAN') cleanCount++;
@@ -3165,6 +3198,7 @@
                     </tr>`;
                 });
             });
+
             
             document.getElementById('totalCleanIps').textContent = cleanCount;
             document.getElementById('totalListedIps').textContent = listedCount;
@@ -3247,8 +3281,22 @@
         window.copyIpsByType = function(type) {
             const teamServers = window.servers.filter(s => parseInt(s.team) === window.activeTrackTeam);
             const historyDateInput = document.getElementById('historyDateSelector');
-            const historyDate = historyDateInput ? historyDateInput.value : '';
-            const isHistoryMode = !!historyDate;
+            const rawValue = historyDateInput && historyDateInput._flatpickr ? historyDateInput._flatpickr.selectedDates : [];
+            
+            // Build list of dates from the selection
+            let rangeDates = [];
+            if (rawValue.length === 1) {
+                rangeDates = [rawValue[0].toISOString().split('T')[0]];
+            } else if (rawValue.length === 2) {
+                let cur = new Date(rawValue[0]);
+                const end = new Date(rawValue[1]);
+                while (cur <= end) {
+                    rangeDates.push(cur.toISOString().split('T')[0]);
+                    cur.setDate(cur.getDate() + 1);
+                }
+            }
+
+            const isHistoryMode = rangeDates.length > 0;
             const today = new Date().toLocaleString('en-us', {weekday:'short'}).toLowerCase();
             const ipsToCopy = [];
             
@@ -3257,21 +3305,23 @@
                 ips.forEach(ip => {
                     const trackId = `${s.id}_${ip.replace(/\./g, '-')}`;
                     const trk = window.trackingData[trackId] || {};
-                    let isListed = false;
-                    let notes = '';
+                    let foundMatch = false;
 
                     if (isHistoryMode) {
-                        const hist = trk.history && trk.history[historyDate] ? trk.history[historyDate] : null;
-                        isListed = hist && (hist.status || '').toUpperCase().trim() === 'LISTED';
-                        notes = hist ? (hist.notes || '') : '';
+                        // Check across all dates in the range
+                        for (const dateStr of rangeDates) {
+                            const hist = trk.history && trk.history[dateStr] ? trk.history[dateStr] : null;
+                            const isListed = hist && (hist.status || '').toUpperCase().trim() === 'LISTED';
+                            const notes = hist ? (hist.notes || '') : '';
+                            if(isListed && notes.includes(type)) { foundMatch = true; break; }
+                        }
                     } else {
-                        isListed = (trk[today] || '').toUpperCase().trim() === 'LISTED';
-                        notes = trk.notes || '';
+                        const isListed = (trk[today] || '').toUpperCase().trim() === 'LISTED';
+                        const notes = trk.notes || '';
+                        if(isListed && notes.includes(type)) foundMatch = true;
                     }
 
-                    if(isListed && notes.includes(type)) {
-                        ipsToCopy.push(ip);
-                    }
+                    if(foundMatch) ipsToCopy.push(ip);
                 });
             });
             
