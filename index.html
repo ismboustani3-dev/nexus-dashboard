@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WMN3 - REPAIRED & READY</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://unpkg.com/lucide@latest?v=1.0.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -682,7 +685,19 @@
                 <div style="height:38px; width:1px; background:rgba(255,255,255,0.1); margin:0 5px;"></div>
                 <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
                     <div style="padding:0 10px; color:var(--text-secondary);"><i data-lucide="calendar" size="16"></i></div>
-                    <input type="date" id="historyDateSelector" lang="en-GB" onchange="window.renderTrackingTable()" style="background:transparent; border:none; color:var(--accent-color); padding:8px 10px 8px 0; outline:none; font-family:'Inter'; font-weight:700; height:38px; cursor:pointer;" title="Select a past date to view scan history">
+                    <input type="text" id="historyDateSelector" placeholder="DD/MM/YYYY" style="background:transparent; border:none; color:var(--accent-color); padding:8px 10px 8px 0; outline:none; font-family:'Inter'; font-weight:700; height:38px; cursor:pointer; width:120px;" title="Select a past date to view scan history">
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            flatpickr("#historyDateSelector", {
+                                dateFormat: "Y-m-d",
+                                altInput: true,
+                                altFormat: "d/m/Y",
+                                onChange: function() {
+                                    if(window.renderTrackingTable) window.renderTrackingTable();
+                                }
+                            });
+                        });
+                    </script>
                 </div>
             </div>
 
