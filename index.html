@@ -3150,21 +3150,24 @@
                             const val = hist ? (hist.status || '').toUpperCase().trim() : '';
                             const notes = hist ? (hist.notes || '') : '';
                             
-                            let color = 'rgba(255,255,255,0.2)';
+                            let color = 'rgba(255,255,255,0.15)';
                             let bg = 'rgba(255,255,255,0.03)';
-                            let textColor = 'rgba(255,255,255,0.3)';
+                            let textColor = 'rgba(255,255,255,0.25)';
                             let label = '—';
+                            let fontSize = '0.9rem';
 
                             if(val === 'CLEAN') {
-                                color = 'rgba(16,185,129,0.3)'; bg = 'rgba(16,185,129,0.1)'; textColor = '#10b981'; label = '✓'; cleanCount++;
+                                color = 'rgba(16,185,129,0.3)'; bg = 'rgba(16,185,129,0.1)'; textColor = '#10b981'; label = 'CLEAN'; cleanCount++;
                             } else if(val === 'LISTED') {
-                                color = 'rgba(239,68,68,0.4)'; bg = 'rgba(239,68,68,0.12)'; textColor = '#ef4444'; label = '✗'; listedCount++; isListed = true;
+                                color = 'rgba(239,68,68,0.5)'; bg = 'rgba(239,68,68,0.15)'; textColor = '#ef4444'; 
+                                // Show the type (CSS, SBL, BARRACUDA...) directly in the cell
+                                label = notes ? notes.toUpperCase() : 'LISTED';
+                                fontSize = label.length > 8 ? '0.65rem' : '0.75rem';
+                                listedCount++; isListed = true;
                             }
 
-                            const tooltip = val === 'LISTED' && notes ? `title="${notes}"` : '';
-
                             return `<td style="padding:2px; text-align:center;">
-                                <span ${tooltip} style="display:inline-block; width:100%; min-width:50px; background:${bg}; color:${textColor}; border:1px solid ${color}; padding:8px 4px; border-radius:6px; font-size:1rem; font-weight:bold; cursor:default;">${label}</span>
+                                <span title="${notes}" style="display:inline-flex; align-items:center; justify-content:center; width:100%; min-width:65px; min-height:36px; background:${bg}; color:${textColor}; border:1px solid ${color}; padding:6px 3px; border-radius:6px; font-size:${fontSize}; font-weight:800; cursor:default; line-height:1.2; text-align:center;">${label}</span>
                             </td>`;
                         }).join('');
                     } else {
