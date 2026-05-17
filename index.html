@@ -1641,7 +1641,9 @@
                     if(!window.trackingData[item.trackId]) window.trackingData[item.trackId] = { mon:'', tue:'', wed:'', thu:'', fri:'', sat:'', sun:'', notes:'' };
                     if(!window.trackingData[item.trackId].history) window.trackingData[item.trackId].history = {};
                     
-                    const isoDate = new Date().toISOString().split('T')[0];
+                    // Use LOCAL date (not UTC) to avoid timezone shift bugs
+                    const now = new Date();
+                    const isoDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
                     
                     if(result.listed) {
                         window.trackingData[item.trackId][today] = 'LISTED';
